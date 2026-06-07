@@ -93,7 +93,7 @@ CSS = """
     gap: 14px;
 }
 
-#tribunal-app .landing-hero {
+#landing-hero {
     position: relative;
     min-height: min(720px, calc(100vh - 42px));
     display: grid !important;
@@ -110,7 +110,7 @@ CSS = """
     padding: clamp(22px, 5vw, 72px);
 }
 
-#tribunal-app .landing-hero:after {
+#landing-hero:after {
     content: "";
     position: absolute;
     left: 0;
@@ -130,7 +130,7 @@ CSS = """
     min-width: 0;
 }
 
-#tribunal-app .landing-hero > * {
+#landing-hero > * {
     min-width: 0 !important;
 }
 
@@ -472,12 +472,12 @@ CSS = """
 }
 
 @media (max-width: 900px) {
-    #tribunal-app .landing-hero,
+    #landing-hero,
     .arena-stage {
         grid-template-columns: 1fr !important;
     }
 
-    #tribunal-app .landing-hero {
+    #landing-hero {
         min-height: auto;
         padding: 22px;
         gap: 18px;
@@ -727,14 +727,14 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
     )
 
 
-with gr.Blocks(elem_id="tribunal-app") as demo:
+with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
     topic_state = gr.State("")
     stance_state = gr.State("")
     opponent_state = gr.State("")
     user_hp_state = gr.State(100)
     opp_hp_state = gr.State(100)
 
-    with gr.Row(visible=True, elem_classes="landing-hero") as setup_area:
+    with gr.Row(visible=True, elem_id="landing-hero") as setup_area:
         gr.HTML(
             """
             <div class="hero-copy">
@@ -756,7 +756,7 @@ with gr.Blocks(elem_id="tribunal-app") as demo:
             gr.HTML(
                 """
                 <h2 class="setup-title">Set the docket</h2>
-                <p class="setup-subtitle">Choose the motion, your side, and the mind you want across the chamber.</p>
+                <p class="setup-subtitle">The whole opening move now lives here: motion, stance, opponent, then straight into the arena.</p>
                 """
             )
             topic_input = gr.Textbox(
