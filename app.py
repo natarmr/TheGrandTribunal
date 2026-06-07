@@ -13,6 +13,7 @@ OPPONENTS = {
         "name": "Oscar Wilde",
         "image": "oscar_wilde.png",
         "sprite": "wilde",
+        "sprite_scale": "wide",
         "epithet": "The Velvet Saboteur",
         "school": "Aesthetic wit and elegant contradiction",
     },
@@ -20,6 +21,7 @@ OPPONENTS = {
         "name": "Friedrich Nietzsche",
         "image": "nietzsche.png",
         "sprite": "nietzsche",
+        "sprite_scale": "tall",
         "epithet": "The Hammer of Certainty",
         "school": "Genealogy, will, and merciless revaluation",
     },
@@ -27,6 +29,7 @@ OPPONENTS = {
         "name": "Plato",
         "image": "socrates.png",
         "sprite": "plato",
+        "sprite_scale": "tall",
         "epithet": "The Keeper of Forms",
         "school": "Dialectic, justice, and ideal truth",
     },
@@ -34,6 +37,7 @@ OPPONENTS = {
         "name": "Arthur Schopenhauer",
         "image": "schopenhauer.png",
         "sprite": "schopenhauer",
+        "sprite_scale": "tall",
         "epithet": "The Pessimist Laureate",
         "school": "Will, suffering, and the limits of desire",
     },
@@ -97,7 +101,7 @@ CSS = """
     gap: 14px;
 }
 
-#landing-hero {
+#landing-view {
     position: relative;
     min-height: min(720px, calc(100vh - 42px));
     display: grid !important;
@@ -114,7 +118,22 @@ CSS = """
     padding: clamp(22px, 5vw, 72px);
 }
 
-#landing-hero:after {
+#landing-view.hide,
+#landing-view.hidden,
+#landing-view[hidden],
+#landing-view[style*="display: none"],
+#landing-view[style*="visibility: hidden"],
+#landing-view[aria-hidden="true"] {
+    display: none !important;
+    min-height: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    overflow: hidden !important;
+}
+
+#landing-view:after {
     content: "";
     position: absolute;
     left: 0;
@@ -134,7 +153,7 @@ CSS = """
     min-width: 0;
 }
 
-#landing-hero > * {
+#landing-view > * {
     min-width: 0 !important;
 }
 
@@ -485,7 +504,7 @@ CSS = """
 
 #court-scene {
     position: relative;
-    min-height: min(760px, calc(100vh - 120px));
+    min-height: min(760px, calc(100vh - 84px));
     overflow: hidden;
     border-radius: 6px;
     background:
@@ -544,7 +563,7 @@ CSS = """
 }
 
 .court-fighter {
-    padding: 8px 10px 10px;
+    padding: 10px 12px 12px;
     border: 2px solid rgba(255, 232, 142, 0.72);
     background: rgba(8, 11, 17, 0.78);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
@@ -560,7 +579,7 @@ CSS = """
     gap: 10px;
     color: #fff7de;
     font-weight: 900;
-    font-size: 0.78rem;
+    font-size: 0.9rem;
     text-transform: uppercase;
 }
 
@@ -569,7 +588,7 @@ CSS = """
 }
 
 .court-hp-track {
-    height: 12px;
+    height: 18px;
     margin-top: 7px;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.36);
@@ -592,10 +611,10 @@ CSS = """
 .court-character {
     position: absolute;
     z-index: 2;
-    left: clamp(24px, 10vw, 170px);
-    bottom: 212px;
-    width: min(34vw, 430px);
-    max-height: calc(100% - 220px);
+    left: clamp(28px, 8vw, 145px);
+    bottom: 166px;
+    width: min(50vw, 620px);
+    max-height: calc(100% - 150px);
     object-fit: contain;
     object-position: bottom left;
     filter: drop-shadow(20px 20px 18px rgba(0, 0, 0, 0.45));
@@ -603,14 +622,18 @@ CSS = """
 }
 
 .court-character.wide {
-    width: min(28vw, 330px);
+    width: min(46vw, 470px);
+}
+
+.court-character.tall {
+    width: min(43vw, 560px);
 }
 
 .court-player-badge {
     position: absolute;
     z-index: 2;
     right: clamp(18px, 5vw, 88px);
-    bottom: 214px;
+    bottom: 178px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -633,7 +656,7 @@ CSS = """
     position: absolute;
     z-index: 3;
     right: 24px;
-    bottom: 198px;
+    bottom: 160px;
     max-width: min(420px, 42vw);
     padding: 10px 13px;
     border-left: 4px solid #ffd45f;
@@ -649,8 +672,8 @@ CSS = """
     right: 0;
     bottom: 0;
     z-index: 5;
-    min-height: 186px;
-    padding: 34px clamp(24px, 8vw, 160px) 28px;
+    min-height: 170px;
+    padding: 34px clamp(24px, 8vw, 150px) 24px;
     border-top: 3px solid rgba(255, 255, 255, 0.9);
     background:
         linear-gradient(90deg, rgba(3, 12, 26, 0.94), rgba(10, 17, 30, 0.82)),
@@ -677,7 +700,7 @@ CSS = """
 .dialogue-line {
     margin: 0;
     max-width: 1120px;
-    font: 500 clamp(1.8rem, 4vw, 3.1rem)/1.22 Georgia, "Times New Roman", serif;
+    font: 500 clamp(1.65rem, 3.7vw, 2.9rem)/1.2 Georgia, "Times New Roman", serif;
     color: #fff;
     text-shadow: 0 2px 0 rgba(0, 0, 0, 0.42);
 }
@@ -692,13 +715,13 @@ CSS = """
 }
 
 .argument-dock {
-    padding: 12px;
+    padding: 10px 12px 12px;
     background: #080a0f;
     border-top: 1px solid rgba(255, 232, 142, 0.28);
 }
 
 .argument-dock textarea {
-    min-height: 84px !important;
+    min-height: 64px !important;
 }
 
 .hidden-runtime {
@@ -706,13 +729,13 @@ CSS = """
 }
 
 @media (max-width: 900px) {
-    #landing-hero,
+    #landing-view,
     .arena-stage,
     .court-hud {
         grid-template-columns: 1fr !important;
     }
 
-    #landing-hero {
+    #landing-view {
         min-height: auto;
         padding: 22px;
         gap: 18px;
@@ -778,6 +801,10 @@ def opponent_name(opponent):
     return OPPONENTS.get(opponent, {}).get("name", "Opponent")
 
 
+def file_url(path):
+    return f"/gradio_api/file={html.escape(path)}"
+
+
 def get_health_bar_html(hp, name, is_user=True):
     status = "danger" if hp <= 20 else "warning" if hp <= 50 else ""
     side = "left" if is_user else "right"
@@ -802,7 +829,7 @@ def get_roster_html():
         chips.append(
             f"""
             <div class="opponent-chip">
-                <img src="/file={html.escape(data["image"])}" alt="{html.escape(data["name"])}">
+                <img src="{file_url(data["image"])}" alt="{html.escape(data["name"])}">
                 <strong>{html.escape(data["name"])}</strong>
                 <span>{html.escape(data["epithet"])}</span>
             </div>
@@ -850,13 +877,13 @@ def get_arena_html(
     sprite_path = get_sprite_path(opponent, opponent_pose)
     player_sprite_path = get_player_sprite_path(player_pose)
     bg_path = "sprites/opp_background.jpg"
-    sprite_size_class = "wide" if data["sprite"] == "wilde" else ""
+    sprite_size_class = data.get("sprite_scale", "tall")
     verdict_html = ""
     if verdict:
         verdict_html = f'<div class="court-verdict-strip">{html.escape(verdict)}</div>'
 
     return f"""
-    <div id="court-scene" style="--court-bg: url('/file={html.escape(bg_path)}');">
+    <div id="court-scene" style="--court-bg: url('{file_url(bg_path)}');">
         <div class="court-hud">
             <div class="court-fighter">
                 <div class="court-fighter-label">
@@ -881,9 +908,9 @@ def get_arena_html(
                 </div>
             </div>
         </div>
-        <img class="court-character {sprite_size_class}" src="/file={html.escape(sprite_path)}" alt="{html.escape(data["name"])}">
+        <img class="court-character {sprite_size_class}" src="{file_url(sprite_path)}" alt="{html.escape(data["name"])}">
         <div class="court-player-badge">
-            <img src="/file={html.escape(player_sprite_path)}" alt="Advocate">
+            <img src="{file_url(player_sprite_path)}" alt="Advocate">
             <span>Your Bench</span>
         </div>
         {verdict_html}
@@ -1146,7 +1173,7 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
     user_hp_state = gr.State(100)
     opp_hp_state = gr.State(100)
 
-    with gr.Row(visible=True, elem_id="landing-hero") as setup_area:
+    with gr.Column(visible=True, elem_id="landing-view") as setup_area:
         gr.HTML(
             """
             <div class="hero-copy">
