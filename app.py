@@ -93,22 +93,24 @@ CSS = """
     gap: 14px;
 }
 
-.tribunal-hero {
+#tribunal-app .landing-hero {
     position: relative;
-    min-height: 360px;
-    display: grid;
-    grid-template-columns: minmax(280px, 0.95fr) minmax(420px, 1.55fr);
-    align-items: stretch;
+    min-height: min(720px, calc(100vh - 42px));
+    display: grid !important;
+    grid-template-columns: minmax(360px, 0.92fr) minmax(420px, 0.72fr) !important;
+    align-items: center !important;
+    gap: clamp(18px, 4vw, 62px) !important;
     overflow: hidden;
     border: 1px solid rgba(201, 154, 62, 0.34);
     background:
-        linear-gradient(90deg, rgba(16, 18, 22, 0.94), rgba(31, 22, 22, 0.72) 54%, rgba(239, 226, 198, 0.1)),
-        url('/file=oscar_wilde.png') right 5% bottom 0 / min(48vw, 640px) auto no-repeat,
+        radial-gradient(circle at 72% 20%, rgba(201, 154, 62, 0.12), transparent 28%),
+        linear-gradient(90deg, rgba(16, 18, 22, 0.96), rgba(31, 22, 22, 0.84) 54%, rgba(12, 13, 16, 0.9)),
         #171a20;
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    padding: clamp(22px, 5vw, 72px);
 }
 
-.tribunal-hero:after {
+#tribunal-app .landing-hero:after {
     content: "";
     position: absolute;
     left: 0;
@@ -122,10 +124,14 @@ CSS = """
 .hero-copy {
     position: relative;
     z-index: 1;
-    padding: clamp(26px, 5vw, 58px);
     display: flex;
     flex-direction: column;
     justify-content: center;
+    min-width: 0;
+}
+
+#tribunal-app .landing-hero > * {
+    min-width: 0 !important;
 }
 
 .kicker,
@@ -140,9 +146,9 @@ CSS = """
 .hero-copy h1 {
     margin: 10px 0 10px;
     color: #fff7e8;
-    font: 900 clamp(2.25rem, 6vw, 5.8rem)/0.92 Cinzel, serif;
+    font: 900 clamp(3.15rem, 7vw, 6.6rem)/0.9 Cinzel, serif;
     letter-spacing: 0;
-    max-width: 720px;
+    max-width: 760px;
 }
 
 .hero-copy p {
@@ -170,12 +176,25 @@ CSS = """
     font-weight: 800;
 }
 
-.setup-shell,
 .debate-shell {
     margin-top: 14px;
     padding: clamp(12px, 2vw, 22px);
     border: 1px solid rgba(201, 154, 62, 0.3);
     background: rgba(17, 19, 24, 0.74);
+}
+
+.setup-panel {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    padding: clamp(16px, 2.3vw, 26px);
+    border: 1px solid rgba(201, 154, 62, 0.42);
+    border-radius: 6px;
+    background:
+        linear-gradient(180deg, rgba(247, 239, 224, 0.13), rgba(247, 239, 224, 0.045)),
+        rgba(11, 12, 15, 0.72);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.26);
+    backdrop-filter: blur(10px);
 }
 
 .setup-title,
@@ -185,15 +204,22 @@ CSS = """
     font: 800 1.02rem/1.2 Cinzel, serif;
 }
 
+.setup-subtitle {
+    margin: -4px 0 16px;
+    color: rgba(247, 239, 224, 0.68);
+    font-size: 0.86rem;
+    line-height: 1.4;
+}
+
 .opponent-roster {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
 }
 
 .opponent-chip {
-    min-height: 154px;
+    min-height: 118px;
     overflow: hidden;
     border: 1px solid rgba(201, 154, 62, 0.3);
     background: linear-gradient(180deg, rgba(239, 226, 198, 0.1), rgba(10, 11, 14, 0.4));
@@ -203,7 +229,7 @@ CSS = """
 
 .opponent-chip img {
     width: 100%;
-    height: 112px;
+    height: 78px;
     object-fit: cover;
     object-position: top center;
     filter: saturate(0.92) contrast(1.05);
@@ -225,6 +251,15 @@ CSS = """
     color: rgba(247, 239, 224, 0.68);
     font-size: 0.72rem;
     padding-bottom: 8px;
+}
+
+.setup-panel .form,
+.setup-panel .block {
+    background: transparent !important;
+}
+
+.setup-panel .radio-group {
+    gap: 8px !important;
 }
 
 .arena-stage {
@@ -437,22 +472,15 @@ CSS = """
 }
 
 @media (max-width: 900px) {
-    .tribunal-hero,
+    #tribunal-app .landing-hero,
     .arena-stage {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
     }
 
-    .tribunal-hero {
-        min-height: 520px;
-        background:
-            linear-gradient(180deg, rgba(16, 18, 22, 0.96), rgba(31, 22, 22, 0.62) 58%, rgba(8, 9, 12, 0.88)),
-            url('/file=oscar_wilde.png') center bottom / min(94vw, 520px) auto no-repeat,
-            #171a20;
-        align-items: start;
-    }
-
-    .hero-copy {
-        padding-bottom: 260px;
+    #tribunal-app .landing-hero {
+        min-height: auto;
+        padding: 22px;
+        gap: 18px;
     }
 
     .opponent-roster,
@@ -700,9 +728,15 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
 
 
 with gr.Blocks(elem_id="tribunal-app") as demo:
-    gr.HTML(
-        """
-        <section class="tribunal-hero">
+    topic_state = gr.State("")
+    stance_state = gr.State("")
+    opponent_state = gr.State("")
+    user_hp_state = gr.State(100)
+    opp_hp_state = gr.State(100)
+
+    with gr.Row(visible=True, elem_classes="landing-hero") as setup_area:
+        gr.HTML(
+            """
             <div class="hero-copy">
                 <span class="kicker">AI-powered dialectical combat</span>
                 <h1>The Grand Tribunal</h1>
@@ -716,40 +750,35 @@ with gr.Blocks(elem_id="tribunal-app") as demo:
                     <span>Weak logic causes fatigue</span>
                 </div>
             </div>
-        </section>
-        """
-    )
-
-    topic_state = gr.State("")
-    stance_state = gr.State("")
-    opponent_state = gr.State("")
-    user_hp_state = gr.State(100)
-    opp_hp_state = gr.State(100)
-
-    with gr.Column(visible=True, elem_classes="setup-shell") as setup_area:
-        gr.HTML('<h2 class="setup-title">Configure the debate</h2>')
-        with gr.Row():
+            """
+        )
+        with gr.Column(elem_classes="setup-panel"):
+            gr.HTML(
+                """
+                <h2 class="setup-title">Set the docket</h2>
+                <p class="setup-subtitle">Choose the motion, your side, and the mind you want across the chamber.</p>
+                """
+            )
             topic_input = gr.Textbox(
                 label="Debate Topic",
                 placeholder="e.g. The pursuit of happiness is the highest good.",
                 lines=3,
-                scale=3,
             )
             stance_input = gr.Radio(["For", "Against"], label="Your Stance", value="For", scale=1)
 
-        opponent_input = gr.Dropdown(
-            choices=[
-                ("Oscar Wilde", "oscar_wilde"),
-                ("Friedrich Nietzsche", "friedrich_nietzsche"),
-                ("Plato", "plato"),
-                ("Arthur Schopenhauer", "schopenhauer"),
-            ],
-            label="Select Opponent",
-            value="oscar_wilde",
-        )
-        gr.HTML(get_roster_html())
-        start_btn = gr.Button("Enter the Tribunal", variant="primary")
-        error_box = gr.HTML("", visible=True)
+            opponent_input = gr.Radio(
+                choices=[
+                    ("Oscar Wilde", "oscar_wilde"),
+                    ("Nietzsche", "friedrich_nietzsche"),
+                    ("Plato", "plato"),
+                    ("Schopenhauer", "schopenhauer"),
+                ],
+                label="Select Opponent",
+                value="oscar_wilde",
+            )
+            gr.HTML(get_roster_html())
+            start_btn = gr.Button("Enter the Tribunal", variant="primary")
+            error_box = gr.HTML("", visible=True)
 
     with gr.Column(visible=False, elem_classes="debate-shell") as debate_area:
         arena_html = gr.HTML(get_arena_html())
