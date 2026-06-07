@@ -12,24 +12,28 @@ OPPONENTS = {
     "oscar_wilde": {
         "name": "Oscar Wilde",
         "image": "oscar_wilde.png",
+        "sprite": "wilde",
         "epithet": "The Velvet Saboteur",
         "school": "Aesthetic wit and elegant contradiction",
     },
     "friedrich_nietzsche": {
         "name": "Friedrich Nietzsche",
         "image": "nietzsche.png",
+        "sprite": "nietzsche",
         "epithet": "The Hammer of Certainty",
         "school": "Genealogy, will, and merciless revaluation",
     },
     "plato": {
         "name": "Plato",
         "image": "socrates.png",
+        "sprite": "plato",
         "epithet": "The Keeper of Forms",
         "school": "Dialectic, justice, and ideal truth",
     },
     "schopenhauer": {
         "name": "Arthur Schopenhauer",
         "image": "schopenhauer.png",
+        "sprite": "schopenhauer",
         "epithet": "The Pessimist Laureate",
         "school": "Will, suffering, and the limits of desire",
     },
@@ -471,9 +475,240 @@ CSS = """
     font-weight: 800;
 }
 
+.debate-shell {
+    margin-top: 0;
+    padding: 0;
+    border: 1px solid rgba(245, 197, 79, 0.42);
+    background: #06070a;
+    overflow: hidden;
+}
+
+#court-scene {
+    position: relative;
+    min-height: min(760px, calc(100vh - 120px));
+    overflow: hidden;
+    border-radius: 6px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.06), transparent 26%),
+        var(--court-bg) center / cover no-repeat,
+        #b18115;
+}
+
+#court-scene:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(90deg, rgba(0,0,0,0.22), transparent 32%, rgba(0,0,0,0.1)),
+        repeating-linear-gradient(0deg, rgba(0,0,0,0.055) 0, rgba(0,0,0,0.055) 1px, transparent 1px, transparent 5px);
+    pointer-events: none;
+}
+
+.court-hud {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: minmax(180px, 0.7fr) minmax(220px, 1fr) minmax(180px, 0.7fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.court-docket {
+    min-width: 0;
+    padding: 10px 14px;
+    border: 2px solid rgba(255, 232, 142, 0.72);
+    background: rgba(10, 12, 18, 0.72);
+    color: #fff4cf;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.26);
+}
+
+.court-docket strong,
+.court-docket span {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.court-docket strong {
+    font: 900 0.78rem/1.1 Inter, sans-serif;
+    color: #ffd56e;
+    text-transform: uppercase;
+}
+
+.court-docket span {
+    margin-top: 4px;
+    font: 800 clamp(0.88rem, 1.7vw, 1.2rem)/1.15 Cinzel, serif;
+}
+
+.court-fighter {
+    padding: 8px 10px 10px;
+    border: 2px solid rgba(255, 232, 142, 0.72);
+    background: rgba(8, 11, 17, 0.78);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
+}
+
+.court-fighter.right {
+    text-align: right;
+}
+
+.court-fighter-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: #fff7de;
+    font-weight: 900;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+}
+
+.court-fighter.right .court-fighter-label {
+    flex-direction: row-reverse;
+}
+
+.court-hp-track {
+    height: 12px;
+    margin-top: 7px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.36);
+    background: rgba(0, 0, 0, 0.62);
+}
+
+.court-hp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #18b974, #f2dc63);
+}
+
+.court-hp-fill.warning {
+    background: linear-gradient(90deg, #d98520, #f6d46a);
+}
+
+.court-hp-fill.danger {
+    background: linear-gradient(90deg, #b51f32, #ff785e);
+}
+
+.court-character {
+    position: absolute;
+    z-index: 2;
+    left: clamp(24px, 10vw, 170px);
+    bottom: 212px;
+    width: min(34vw, 430px);
+    max-height: calc(100% - 220px);
+    object-fit: contain;
+    object-position: bottom left;
+    filter: drop-shadow(20px 20px 18px rgba(0, 0, 0, 0.45));
+    image-rendering: auto;
+}
+
+.court-character.wide {
+    width: min(28vw, 330px);
+}
+
+.court-player-badge {
+    position: absolute;
+    z-index: 2;
+    right: clamp(18px, 5vw, 88px);
+    bottom: 214px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: 2px solid rgba(255, 232, 142, 0.62);
+    background: rgba(9, 12, 18, 0.68);
+    color: #fff7de;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.court-player-badge img {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+
+.court-verdict-strip {
+    position: absolute;
+    z-index: 3;
+    right: 24px;
+    bottom: 198px;
+    max-width: min(420px, 42vw);
+    padding: 10px 13px;
+    border-left: 4px solid #ffd45f;
+    background: rgba(11, 14, 22, 0.82);
+    color: #f8e5af;
+    font-size: 0.86rem;
+    line-height: 1.35;
+}
+
+.dialogue-box {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    min-height: 186px;
+    padding: 34px clamp(24px, 8vw, 160px) 28px;
+    border-top: 3px solid rgba(255, 255, 255, 0.9);
+    background:
+        linear-gradient(90deg, rgba(3, 12, 26, 0.94), rgba(10, 17, 30, 0.82)),
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 6px);
+    color: white;
+    box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.36);
+}
+
+.dialogue-name {
+    position: absolute;
+    top: -28px;
+    left: clamp(24px, 8vw, 150px);
+    min-width: 210px;
+    padding: 8px 28px 9px;
+    color: white;
+    font: 700 1.55rem/1 Cinzel, serif;
+    background: linear-gradient(180deg, #3c9bc3, #257fa7);
+    border: 2px solid white;
+    clip-path: polygon(8% 0, 92% 0, 100% 50%, 92% 100%, 8% 100%, 0 50%);
+    text-align: center;
+    text-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.dialogue-line {
+    margin: 0;
+    max-width: 1120px;
+    font: 500 clamp(1.8rem, 4vw, 3.1rem)/1.22 Georgia, "Times New Roman", serif;
+    color: #fff;
+    text-shadow: 0 2px 0 rgba(0, 0, 0, 0.42);
+}
+
+.dialogue-next {
+    position: absolute;
+    right: clamp(22px, 5vw, 76px);
+    bottom: 25px;
+    color: #ffda54;
+    font: 900 clamp(2rem, 4vw, 3.2rem)/1 Inter, sans-serif;
+    letter-spacing: -0.08em;
+}
+
+.argument-dock {
+    padding: 12px;
+    background: #080a0f;
+    border-top: 1px solid rgba(255, 232, 142, 0.28);
+}
+
+.argument-dock textarea {
+    min-height: 84px !important;
+}
+
+.hidden-runtime {
+    display: none !important;
+}
+
 @media (max-width: 900px) {
     #landing-hero,
-    .arena-stage {
+    .arena-stage,
+    .court-hud {
         grid-template-columns: 1fr !important;
     }
 
@@ -496,6 +731,44 @@ CSS = """
     .combatant.user {
         align-items: center;
         text-align: center;
+    }
+
+    #court-scene {
+        min-height: 720px;
+    }
+
+    .court-hud {
+        position: relative;
+        inset: auto;
+        padding: 12px;
+    }
+
+    .court-character {
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 215px;
+        width: min(72vw, 310px);
+        max-height: 390px;
+    }
+
+    .court-player-badge,
+    .court-verdict-strip {
+        display: none;
+    }
+
+    .dialogue-box {
+        min-height: 190px;
+        padding: 32px 20px 24px;
+    }
+
+    .dialogue-name {
+        left: 18px;
+        min-width: 160px;
+        font-size: 1.1rem;
+    }
+
+    .dialogue-line {
+        font-size: 1.45rem;
     }
 }
 """
@@ -538,31 +811,86 @@ def get_roster_html():
     return f"""<div class="opponent-roster">{''.join(chips)}</div>"""
 
 
-def get_arena_html(user_hp=100, opp_hp=100, opponent="oscar_wilde", topic="", stance="For"):
+def get_sprite_path(opponent, pose="talking"):
+    data = OPPONENTS.get(opponent) or OPPONENTS["oscar_wilde"]
+    safe_pose = pose if pose in {"talking", "thinking", "damage", "victory"} else "talking"
+    return f"sprites/{data['sprite']}_{safe_pose}.png"
+
+
+def get_player_sprite_path(pose="thinking"):
+    safe_pose = pose if pose in {"talking", "thinking", "damage", "victory"} else "thinking"
+    return f"sprites/player_{safe_pose}.png"
+
+
+def get_hp_class(hp):
+    if hp <= 20:
+        return "danger"
+    if hp <= 50:
+        return "warning"
+    return ""
+
+
+def get_arena_html(
+    user_hp=100,
+    opp_hp=100,
+    opponent="oscar_wilde",
+    topic="",
+    stance="For",
+    speaker="Judge",
+    dialogue="State your case. The court is listening.",
+    opponent_pose="talking",
+    player_pose="thinking",
+    verdict="",
+):
     data = OPPONENTS.get(opponent) or OPPONENTS["oscar_wilde"]
     topic_text = topic.strip() if topic else "Awaiting a motion before the court"
     stance_text = stance or "For"
+    user_hp_safe = max(0, min(100, int(user_hp)))
+    opp_hp_safe = max(0, min(100, int(opp_hp)))
+    sprite_path = get_sprite_path(opponent, opponent_pose)
+    player_sprite_path = get_player_sprite_path(player_pose)
+    bg_path = "sprites/opp_background.jpg"
+    sprite_size_class = "wide" if data["sprite"] == "wilde" else ""
+    verdict_html = ""
+    if verdict:
+        verdict_html = f'<div class="court-verdict-strip">{html.escape(verdict)}</div>'
+
     return f"""
-    <div class="arena-stage">
-        <div class="combatant user">
-            <div class="speaker-mark">YOU</div>
-            <div class="nameplate">
-                <strong>The Advocate</strong>
-                <span>{int(user_hp)} HP - reasoning under oath</span>
+    <div id="court-scene" style="--court-bg: url('/file={html.escape(bg_path)}');">
+        <div class="court-hud">
+            <div class="court-fighter">
+                <div class="court-fighter-label">
+                    <span>Advocate</span>
+                    <span>{user_hp_safe}/100</span>
+                </div>
+                <div class="court-hp-track">
+                    <div class="court-hp-fill {get_hp_class(user_hp_safe)}" style="width: {user_hp_safe}%;"></div>
+                </div>
+            </div>
+            <div class="court-docket">
+                <strong>{html.escape(stance_text)} the motion</strong>
+                <span>{html.escape(topic_text)}</span>
+            </div>
+            <div class="court-fighter right">
+                <div class="court-fighter-label">
+                    <span>{html.escape(data["name"])}</span>
+                    <span>{opp_hp_safe}/100</span>
+                </div>
+                <div class="court-hp-track">
+                    <div class="court-hp-fill {get_hp_class(opp_hp_safe)}" style="width: {opp_hp_safe}%;"></div>
+                </div>
             </div>
         </div>
-        <div class="topic-docket">
-            <span class="stage-kicker">Docket before the tribunal</span>
-            <h2>{html.escape(topic_text)}</h2>
-            <p>{html.escape(data["school"])}</p>
-            <div class="stance-pill">Your stance: {html.escape(stance_text)}</div>
+        <img class="court-character {sprite_size_class}" src="/file={html.escape(sprite_path)}" alt="{html.escape(data["name"])}">
+        <div class="court-player-badge">
+            <img src="/file={html.escape(player_sprite_path)}" alt="Advocate">
+            <span>Your Bench</span>
         </div>
-        <div class="combatant opponent">
-            <img src="/file={html.escape(data["image"])}" alt="{html.escape(data["name"])}">
-            <div class="nameplate">
-                <strong>{html.escape(data["name"])}</strong>
-                <span>{html.escape(data["epithet"])} - {int(opp_hp)} HP</span>
-            </div>
+        {verdict_html}
+        <div class="dialogue-box">
+            <div class="dialogue-name">{html.escape(speaker)}</div>
+            <p class="dialogue-line">{html.escape(dialogue)}</p>
+            <div class="dialogue-next">&gt;&gt;</div>
         </div>
     </div>
     """
@@ -591,7 +919,17 @@ def start_debate(topic, stance, opponent):
             100,
             get_health_bar_html(100, "You", True),
             get_health_bar_html(100, opponent_name(opponent), False),
-            get_arena_html(100, 100, opponent or "oscar_wilde", topic or "", stance or "For"),
+            get_arena_html(
+                100,
+                100,
+                opponent or "oscar_wilde",
+                topic or "",
+                stance or "For",
+                "Judge",
+                "Before the court can convene, enter a motion and choose your opponent.",
+                "thinking",
+                "thinking",
+            ),
         )
 
     display_name = opponent_name(opponent)
@@ -616,7 +954,18 @@ def start_debate(topic, stance, opponent):
         100,
         get_health_bar_html(100, "You", True),
         get_health_bar_html(100, display_name, False),
-        get_arena_html(100, 100, opponent, topic, stance),
+        get_arena_html(
+            100,
+            100,
+            opponent,
+            topic,
+            stance,
+            "Judge",
+            "The Grand Tribunal begins. You have the floor.",
+            "thinking",
+            "talking",
+            f"{display_name} awaits your opening argument.",
+        ),
     )
 
 
@@ -630,7 +979,17 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
             opp_hp,
             get_health_bar_html(user_hp, "You", True),
             get_health_bar_html(opp_hp, display_name, False),
-            get_arena_html(user_hp, opp_hp, opponent, topic, stance),
+            get_arena_html(
+                user_hp,
+                opp_hp,
+                opponent,
+                topic,
+                stance,
+                "Judge",
+                "State your argument when ready.",
+                "thinking",
+                "thinking",
+            ),
         )
 
     chat_history.append({"role": "user", "content": user_arg})
@@ -664,7 +1023,18 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
             opp_hp,
             get_health_bar_html(user_hp, "You", True),
             get_health_bar_html(opp_hp, display_name, False),
-            get_arena_html(user_hp, opp_hp, opponent, topic, stance),
+            get_arena_html(
+                user_hp,
+                opp_hp,
+                opponent,
+                topic,
+                stance,
+                "Judge",
+                f"{display_name} has been defeated. The motion stands with you.",
+                "damage",
+                "victory",
+                f"Your score: {score}/10. Damage dealt: {damage}.",
+            ),
         )
     if user_hp == 0:
         turn_msg += "**Defeat.** Your logic has crumbled."
@@ -676,7 +1046,18 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
             opp_hp,
             get_health_bar_html(user_hp, "You", True),
             get_health_bar_html(opp_hp, display_name, False),
-            get_arena_html(user_hp, opp_hp, opponent, topic, stance),
+            get_arena_html(
+                user_hp,
+                opp_hp,
+                opponent,
+                topic,
+                stance,
+                "Judge",
+                "Your logic has crumbled. The tribunal rules against you.",
+                "victory",
+                "damage",
+                f"Your score: {score}/10. Fatigue suffered: {fatigue}.",
+            ),
         )
 
     turn_msg += "---\n\n"
@@ -711,10 +1092,30 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
 
     if user_hp == 0:
         turn_msg += "\n\n**Defeat.** Your logic has crumbled."
+        scene_speaker = "Judge"
+        scene_dialogue = "Your logic has crumbled. The tribunal rules against you."
+        opponent_pose = "victory"
+        player_pose = "damage"
     elif opp_hp == 0:
         turn_msg += f"\n\n**Victory.** {display_name} has been undone by the exchange."
+        scene_speaker = "Judge"
+        scene_dialogue = f"{display_name} has been undone by the exchange."
+        opponent_pose = "damage"
+        player_pose = "victory"
+    else:
+        scene_speaker = display_name
+        scene_dialogue = opp_response
+        opponent_pose = "talking" if opp_damage > 0 else "damage"
+        player_pose = "damage" if opp_damage > 0 else "thinking"
 
     chat_history.append({"role": "assistant", "content": turn_msg})
+
+    verdict = (
+        f"You: {score}/10"
+        f" | {display_name}: {opp_score}/10"
+        f" | Damage taken: {opp_damage if opp_damage > 0 else 0}"
+        f" | Damage dealt: {damage if damage > 0 else 0}"
+    )
 
     return (
         "",
@@ -723,7 +1124,18 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
         opp_hp,
         get_health_bar_html(user_hp, "You", True),
         get_health_bar_html(opp_hp, display_name, False),
-        get_arena_html(user_hp, opp_hp, opponent, topic, stance),
+        get_arena_html(
+            user_hp,
+            opp_hp,
+            opponent,
+            topic,
+            stance,
+            scene_speaker,
+            scene_dialogue,
+            opponent_pose,
+            player_pose,
+            verdict,
+        ),
     )
 
 
@@ -782,16 +1194,16 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
 
     with gr.Column(visible=False, elem_classes="debate-shell") as debate_area:
         arena_html = gr.HTML(get_arena_html())
-        with gr.Row(elem_classes="vitals-grid"):
+        with gr.Row(elem_classes=["vitals-grid", "hidden-runtime"]):
             user_health_html = gr.HTML(get_health_bar_html(100, "You", True))
             opp_health_html = gr.HTML(get_health_bar_html(100, "Opponent", False))
 
-        chatbot = gr.Chatbot(label="Tribunal Transcript", height=500, elem_id="tribunal-chat")
+        chatbot = gr.Chatbot(label="Tribunal Transcript", height=500, elem_id="tribunal-chat", visible=False)
 
-        with gr.Row(elem_classes="submit-row"):
+        with gr.Row(elem_classes=["submit-row", "argument-dock"]):
             user_msg = gr.Textbox(
                 label="Your Argument",
-                placeholder="State your case with force, clarity, and a little nerve.",
+                placeholder="Type your objection, proof, or philosophical haymaker...",
                 lines=4,
                 scale=5,
                 elem_id="submit-argument",
