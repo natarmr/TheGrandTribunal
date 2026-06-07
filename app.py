@@ -769,7 +769,10 @@ CSS = """
 }
 
 .argument-dock textarea {
-    min-height: 64px !important;
+    height: 84px !important;
+    min-height: 84px !important;
+    resize: none !important;
+    overflow-y: auto !important;
 }
 
 .hidden-runtime {
@@ -1524,6 +1527,7 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
                 label="Typed Fallback",
                 placeholder="Optional fallback while testing...",
                 lines=3,
+                max_lines=3,
                 scale=5,
             )
             submit_btn = gr.Button("Submit Argument", variant="primary", scale=1)
