@@ -611,10 +611,10 @@ CSS = """
 .court-character {
     position: absolute;
     z-index: 2;
-    left: clamp(28px, 8vw, 145px);
-    bottom: 166px;
+    left: clamp(34px, 8vw, 150px);
+    bottom: 188px;
     width: min(50vw, 620px);
-    max-height: calc(100% - 150px);
+    max-height: calc(100% - 285px);
     object-fit: contain;
     object-position: bottom left;
     filter: drop-shadow(20px 20px 18px rgba(0, 0, 0, 0.45));
@@ -629,26 +629,9 @@ CSS = """
     width: min(43vw, 560px);
 }
 
-.court-player-badge {
-    position: absolute;
-    z-index: 2;
-    right: clamp(18px, 5vw, 88px);
-    bottom: 178px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 12px;
-    border: 2px solid rgba(255, 232, 142, 0.62);
-    background: rgba(9, 12, 18, 0.68);
-    color: #fff7de;
-    font-weight: 900;
-    text-transform: uppercase;
-}
-
-.court-player-badge img {
-    width: 72px;
-    height: 72px;
-    object-fit: contain;
+.court-character.player {
+    left: clamp(60px, 11vw, 190px);
+    width: min(32vw, 380px);
     image-rendering: pixelated;
 }
 
@@ -774,7 +757,6 @@ CSS = """
         max-height: 390px;
     }
 
-    .court-player-badge,
     .court-verdict-strip {
         display: none;
     }
@@ -863,8 +845,9 @@ def get_arena_html(
     opponent="oscar_wilde",
     topic="",
     stance="For",
-    speaker="Judge",
-    dialogue="State your case. The court is listening.",
+    speaker="Advocate",
+    dialogue="State your case. The tribunal is listening.",
+    active_actor="player",
     opponent_pose="talking",
     player_pose="thinking",
     verdict="",
@@ -877,7 +860,14 @@ def get_arena_html(
     sprite_path = get_sprite_path(opponent, opponent_pose)
     player_sprite_path = get_player_sprite_path(player_pose)
     bg_path = "sprites/opp_background.jpg"
-    sprite_size_class = data.get("sprite_scale", "tall")
+    if active_actor == "opponent":
+        active_sprite_path = sprite_path
+        active_alt = data["name"]
+        sprite_size_class = data.get("sprite_scale", "tall")
+    else:
+        active_sprite_path = player_sprite_path
+        active_alt = "Advocate"
+        sprite_size_class = "player"
     verdict_html = ""
     if verdict:
         verdict_html = f'<div class="court-verdict-strip">{html.escape(verdict)}</div>'
@@ -908,11 +898,7 @@ def get_arena_html(
                 </div>
             </div>
         </div>
-        <img class="court-character {sprite_size_class}" src="{file_url(sprite_path)}" alt="{html.escape(data["name"])}">
-        <div class="court-player-badge">
-            <img src="{file_url(player_sprite_path)}" alt="Advocate">
-            <span>Your Bench</span>
-        </div>
+        <img class="court-character {sprite_size_class}" src="{file_url(active_sprite_path)}" alt="{html.escape(active_alt)}">
         {verdict_html}
         <div class="dialogue-box">
             <div class="dialogue-name">{html.escape(speaker)}</div>
@@ -935,6 +921,24 @@ def calculate_fatigue(score):
     return 0
 
 
+def preview_player_argument(user_arg, topic, stance, opponent, user_hp, opp_hp):
+    prompt = user_arg.strip() if user_arg else "Make your next argument."
+    if len(prompt) > 140:
+        prompt = prompt[:137].rstrip() + "..."
+    return get_arena_html(
+        user_hp=user_hp,
+        opp_hp=opp_hp,
+        opponent=opponent or "oscar_wilde",
+        topic=topic,
+        stance=stance,
+        speaker="Advocate",
+        dialogue=prompt,
+        active_actor="player",
+        player_pose="talking" if user_arg else "thinking",
+        opponent_pose="thinking",
+    )
+
+
 def start_debate(topic, stance, opponent):
     if not topic or not opponent:
         return (
@@ -947,15 +951,15 @@ def start_debate(topic, stance, opponent):
             get_health_bar_html(100, "You", True),
             get_health_bar_html(100, opponent_name(opponent), False),
             get_arena_html(
-                100,
-                100,
-                opponent or "oscar_wilde",
-                topic or "",
-                stance or "For",
-                "Judge",
-                "Before the court can convene, enter a motion and choose your opponent.",
-                "thinking",
-                "thinking",
+                user_hp=100,
+                opp_hp=100,
+                opponent=opponent or "oscar_wilde",
+                topic=topic or "",
+                stance=stance or "For",
+                speaker="Advocate",
+                dialogue="Before the court can convene, enter a motion and choose your opponent.",
+                active_actor="player",
+                player_pose="thinking",
             ),
         )
 
@@ -982,16 +986,17 @@ def start_debate(topic, stance, opponent):
         get_health_bar_html(100, "You", True),
         get_health_bar_html(100, display_name, False),
         get_arena_html(
-            100,
-            100,
-            opponent,
-            topic,
-            stance,
-            "Judge",
-            "The Grand Tribunal begins. You have the floor.",
-            "thinking",
-            "talking",
-            f"{display_name} awaits your opening argument.",
+            user_hp=100,
+            opp_hp=100,
+            opponent=opponent,
+            topic=topic,
+            stance=stance,
+            speaker="Advocate",
+            dialogue="The Grand Tribunal begins. Make your opening argument.",
+            active_actor="player",
+            player_pose="talking",
+            opponent_pose="thinking",
+            verdict=f"{display_name} awaits your opening argument.",
         ),
     )
 
@@ -1007,15 +1012,16 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
             get_health_bar_html(user_hp, "You", True),
             get_health_bar_html(opp_hp, display_name, False),
             get_arena_html(
-                user_hp,
-                opp_hp,
-                opponent,
-                topic,
-                stance,
-                "Judge",
-                "State your argument when ready.",
-                "thinking",
-                "thinking",
+                user_hp=user_hp,
+                opp_hp=opp_hp,
+                opponent=opponent,
+                topic=topic,
+                stance=stance,
+                speaker="Advocate",
+                dialogue="State your argument when ready.",
+                active_actor="player",
+                player_pose="thinking",
+                opponent_pose="thinking",
             ),
         )
 
@@ -1026,12 +1032,12 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
         score = int(j_res.get("score", 5))
         reasoning = j_res.get("reasoning", "No reasoning provided.")
     except Exception as e:
-        score, reasoning = 5, f"Judge failed to evaluate: {str(e)}"
+        score, reasoning = 5, f"Tribunal failed to evaluate: {str(e)}"
 
     damage = calculate_damage(score)
     fatigue = calculate_fatigue(score)
 
-    turn_msg = f"### Judge's Verdict on Your Argument\n**Score: {score}/10** - *{reasoning}*\n\n"
+    turn_msg = f"### Tribunal Verdict on Your Argument\n**Score: {score}/10** - *{reasoning}*\n\n"
 
     if damage > 0:
         opp_hp = max(0, opp_hp - damage)
@@ -1051,16 +1057,17 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
             get_health_bar_html(user_hp, "You", True),
             get_health_bar_html(opp_hp, display_name, False),
             get_arena_html(
-                user_hp,
-                opp_hp,
-                opponent,
-                topic,
-                stance,
-                "Judge",
-                f"{display_name} has been defeated. The motion stands with you.",
-                "damage",
-                "victory",
-                f"Your score: {score}/10. Damage dealt: {damage}.",
+                user_hp=user_hp,
+                opp_hp=opp_hp,
+                opponent=opponent,
+                topic=topic,
+                stance=stance,
+                speaker="Advocate",
+                dialogue=f"{display_name} has been defeated. The motion stands with you.",
+                active_actor="player",
+                opponent_pose="damage",
+                player_pose="victory",
+                verdict=f"Your score: {score}/10. Damage dealt: {damage}.",
             ),
         )
     if user_hp == 0:
@@ -1074,16 +1081,17 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
             get_health_bar_html(user_hp, "You", True),
             get_health_bar_html(opp_hp, display_name, False),
             get_arena_html(
-                user_hp,
-                opp_hp,
-                opponent,
-                topic,
-                stance,
-                "Judge",
-                "Your logic has crumbled. The tribunal rules against you.",
-                "victory",
-                "damage",
-                f"Your score: {score}/10. Fatigue suffered: {fatigue}.",
+                user_hp=user_hp,
+                opp_hp=opp_hp,
+                opponent=opponent,
+                topic=topic,
+                stance=stance,
+                speaker="Advocate",
+                dialogue="Your argument collapses under scrutiny.",
+                active_actor="player",
+                opponent_pose="victory",
+                player_pose="damage",
+                verdict=f"Your score: {score}/10. Fatigue suffered: {fatigue}.",
             ),
         )
 
@@ -1103,12 +1111,12 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
         opp_score = int(j_res2.get("score", 5))
         opp_reasoning = j_res2.get("reasoning", "No reasoning provided.")
     except Exception as e:
-        opp_score, opp_reasoning = 5, f"Judge failed to evaluate: {str(e)}"
+        opp_score, opp_reasoning = 5, f"Tribunal failed to evaluate: {str(e)}"
 
     opp_damage = calculate_damage(opp_score)
     opp_fatigue = calculate_fatigue(opp_score)
 
-    turn_msg += f"### Judge's Verdict on Opponent\n**Score: {opp_score}/10** - *{opp_reasoning}*\n\n"
+    turn_msg += f"### Tribunal Verdict on Opponent\n**Score: {opp_score}/10** - *{opp_reasoning}*\n\n"
 
     if opp_damage > 0:
         user_hp = max(0, user_hp - opp_damage)
@@ -1119,19 +1127,22 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
 
     if user_hp == 0:
         turn_msg += "\n\n**Defeat.** Your logic has crumbled."
-        scene_speaker = "Judge"
-        scene_dialogue = "Your logic has crumbled. The tribunal rules against you."
+        scene_speaker = display_name
+        scene_dialogue = "A neat collapse. Even pessimism feels too generous."
+        active_actor = "opponent"
         opponent_pose = "victory"
         player_pose = "damage"
     elif opp_hp == 0:
         turn_msg += f"\n\n**Victory.** {display_name} has been undone by the exchange."
-        scene_speaker = "Judge"
+        scene_speaker = "Advocate"
         scene_dialogue = f"{display_name} has been undone by the exchange."
+        active_actor = "player"
         opponent_pose = "damage"
         player_pose = "victory"
     else:
         scene_speaker = display_name
         scene_dialogue = opp_response
+        active_actor = "opponent"
         opponent_pose = "talking" if opp_damage > 0 else "damage"
         player_pose = "damage" if opp_damage > 0 else "thinking"
 
@@ -1152,16 +1163,17 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
         get_health_bar_html(user_hp, "You", True),
         get_health_bar_html(opp_hp, display_name, False),
         get_arena_html(
-            user_hp,
-            opp_hp,
-            opponent,
-            topic,
-            stance,
-            scene_speaker,
-            scene_dialogue,
-            opponent_pose,
-            player_pose,
-            verdict,
+            user_hp=user_hp,
+            opp_hp=opp_hp,
+            opponent=opponent,
+            topic=topic,
+            stance=stance,
+            speaker=scene_speaker,
+            dialogue=scene_dialogue,
+            active_actor=active_actor,
+            opponent_pose=opponent_pose,
+            player_pose=player_pose,
+            verdict=verdict,
         ),
     )
 
@@ -1180,7 +1192,7 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
                 <span class="kicker">AI-powered dialectical combat</span>
                 <h1>The Grand Tribunal</h1>
                 <p>
-                    Enter a turn-based battle of wit, where a judge scores the force of each argument
+                    Enter a turn-based battle of wit, where the tribunal scores the force of each argument
                     and history's sharpest minds answer from across the bench.
                 </p>
                 <div class="hero-statline">
@@ -1261,6 +1273,12 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
         fn=handle_turn,
         inputs=[user_msg, topic_state, stance_state, opponent_state, chatbot, user_hp_state, opp_hp_state],
         outputs=[user_msg, chatbot, user_hp_state, opp_hp_state, user_health_html, opp_health_html, arena_html],
+    )
+
+    user_msg.input(
+        fn=preview_player_argument,
+        inputs=[user_msg, topic_state, stance_state, opponent_state, user_hp_state, opp_hp_state],
+        outputs=[arena_html],
     )
 
     user_msg.submit(
