@@ -481,6 +481,10 @@ CSS = """
     min-height: 96px;
 }
 
+#voice-recorder {
+    min-height: 96px;
+}
+
 #tribunal-app button.primary {
     background: linear-gradient(180deg, #d4a34b, #a7612f) !important;
     color: #151312 !important;
@@ -705,6 +709,14 @@ CSS = """
     padding: 10px 12px 12px;
     background: #080a0f;
     border-top: 1px solid rgba(255, 232, 142, 0.28);
+}
+
+.voice-hint {
+    padding: 9px 14px 0;
+    background: #080a0f;
+    color: rgba(247, 239, 224, 0.72);
+    font-size: 0.86rem;
+    font-weight: 700;
 }
 
 .argument-dock textarea {
@@ -1319,13 +1331,23 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
 
         opponent_voice = gr.Audio(label="Opponent Voice", autoplay=True, visible=False)
 
+        gr.HTML(
+            '<div class="voice-hint">Record your argument, stop recording, then submit. The tribunal only processes audio after you press submit.</div>'
+        )
+
         with gr.Row(elem_classes=["submit-row", "argument-dock"]):
             user_audio = gr.Audio(
                 sources=["microphone"],
                 type="filepath",
                 label="Speak Your Argument",
+                format="wav",
+                editable=False,
                 scale=5,
-                elem_id="submit-argument",
+                elem_id="voice-recorder",
+                waveform_options=gr.WaveformOptions(
+                    show_recording_waveform=False,
+                    sample_rate=16000,
+                ),
             )
             submit_btn = gr.Button("Submit Argument", variant="primary", scale=1)
 
