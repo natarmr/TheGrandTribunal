@@ -1268,7 +1268,7 @@ def handle_turn(user_audio, topic, stance, opponent, chat_history, user_hp, opp_
     )
 
 
-with gr.Blocks(elem_id="tribunal-app") as demo:
+with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
     topic_state = gr.State("")
     stance_state = gr.State("")
     opponent_state = gr.State("")
