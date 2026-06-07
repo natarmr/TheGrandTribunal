@@ -1,5 +1,7 @@
 import html
+import os
 import random
+import tempfile
 
 import gradio as gr
 import requests
@@ -7,6 +9,8 @@ import requests
 
 JUDGE_URL = "https://ramratanpadhy59--grand-tribunal-inference-api.modal.run/judge"
 CHARACTER_URL = "https://ramratanpadhy59--grand-tribunal-inference-api.modal.run/character"
+STT_URL = "https://ramratanpadhy59--grand-tribunal-inference-api.modal.run/stt"
+TTS_URL = "https://ramratanpadhy59--grand-tribunal-inference-api.modal.run/tts"
 
 OPPONENTS = {
     "oscar_wilde": {
@@ -921,6 +925,34 @@ def calculate_fatigue(score):
     return 0
 
 
+def transcribe_argument(audio_path):
+    if not audio_path:
+        return ""
+
+    with open(audio_path, "rb") as audio_file:
+        response = requests.post(
+            STT_URL,
+            files={"file": (os.path.basename(audio_path), audio_file, "audio/wav")},
+            timeout=120,
+        )
+    response.raise_for_status()
+    data = response.json()
+    return data.get("text", "").strip()
+
+
+def synthesize_rebuttal_audio(text):
+    if not text:
+        return None
+
+    response = requests.post(TTS_URL, data={"text": text}, timeout=180)
+    response.raise_for_status()
+
+    audio_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+    audio_file.write(response.content)
+    audio_file.close()
+    return audio_file.name
+
+
 def preview_player_argument(user_arg, topic, stance, opponent, user_hp, opp_hp):
     prompt = user_arg.strip() if user_arg else "Make your next argument."
     if len(prompt) > 140:
@@ -961,6 +993,7 @@ def start_debate(topic, stance, opponent):
                 active_actor="player",
                 player_pose="thinking",
             ),
+            None,
         )
 
     display_name = opponent_name(opponent)
@@ -998,14 +1031,15 @@ def start_debate(topic, stance, opponent):
             opponent_pose="thinking",
             verdict=f"{display_name} awaits your opening argument.",
         ),
+        None,
     )
 
 
-def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp):
+def handle_turn(user_audio, topic, stance, opponent, chat_history, user_hp, opp_hp):
     display_name = opponent_name(opponent)
-    if not user_arg:
+    if not user_audio:
         return (
-            "",
+            None,
             chat_history,
             user_hp,
             opp_hp,
@@ -1023,6 +1057,41 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
                 player_pose="thinking",
                 opponent_pose="thinking",
             ),
+            None,
+        )
+
+    try:
+        user_arg = transcribe_argument(user_audio)
+    except Exception as e:
+        user_arg = ""
+        transcription_error = str(e)
+    else:
+        transcription_error = ""
+
+    if not user_arg:
+        message = "I could not transcribe that recording. Try again with a clearer argument."
+        if transcription_error:
+            message = f"{message} ({transcription_error})"
+        return (
+            None,
+            chat_history,
+            user_hp,
+            opp_hp,
+            get_health_bar_html(user_hp, "You", True),
+            get_health_bar_html(opp_hp, display_name, False),
+            get_arena_html(
+                user_hp=user_hp,
+                opp_hp=opp_hp,
+                opponent=opponent,
+                topic=topic,
+                stance=stance,
+                speaker="Advocate",
+                dialogue=message,
+                active_actor="player",
+                player_pose="thinking",
+                opponent_pose="thinking",
+            ),
+            None,
         )
 
     chat_history.append({"role": "user", "content": user_arg})
@@ -1050,7 +1119,7 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
         turn_msg += f"**Victory.** {display_name} has been defeated."
         chat_history.append({"role": "assistant", "content": turn_msg})
         return (
-            "",
+            None,
             chat_history,
             user_hp,
             opp_hp,
@@ -1069,12 +1138,13 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
                 player_pose="victory",
                 verdict=f"Your score: {score}/10. Damage dealt: {damage}.",
             ),
+            None,
         )
     if user_hp == 0:
         turn_msg += "**Defeat.** Your logic has crumbled."
         chat_history.append({"role": "assistant", "content": turn_msg})
         return (
-            "",
+            None,
             chat_history,
             user_hp,
             opp_hp,
@@ -1093,6 +1163,7 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
                 player_pose="damage",
                 verdict=f"Your score: {score}/10. Fatigue suffered: {fatigue}.",
             ),
+            None,
         )
 
     turn_msg += "---\n\n"
@@ -1103,6 +1174,12 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
         opp_response = c_res.get("response", "I have no words.")
     except Exception as e:
         opp_response = f"*Opponent is stunned and silent.* ({str(e)})"
+
+    try:
+        opp_audio = synthesize_rebuttal_audio(opp_response)
+    except Exception as e:
+        opp_audio = None
+        opp_response = f"{opp_response}\n\n(TTS failed: {str(e)})"
 
     turn_msg += f"### {display_name}'s Rebuttal\n\"{opp_response}\"\n\n"
 
@@ -1156,7 +1233,7 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
     )
 
     return (
-        "",
+        None,
         chat_history,
         user_hp,
         opp_hp,
@@ -1175,6 +1252,7 @@ def handle_turn(user_arg, topic, stance, opponent, chat_history, user_hp, opp_hp
             player_pose=player_pose,
             verdict=verdict,
         ),
+        opp_audio,
     )
 
 
@@ -1239,11 +1317,13 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
 
         chatbot = gr.Chatbot(label="Tribunal Transcript", height=500, elem_id="tribunal-chat", visible=False)
 
+        opponent_voice = gr.Audio(label="Opponent Voice", autoplay=True, visible=False)
+
         with gr.Row(elem_classes=["submit-row", "argument-dock"]):
-            user_msg = gr.Textbox(
-                label="Your Argument",
-                placeholder="Type your objection, proof, or philosophical haymaker...",
-                lines=4,
+            user_audio = gr.Audio(
+                sources=["microphone"],
+                type="filepath",
+                label="Speak Your Argument",
                 scale=5,
                 elem_id="submit-argument",
             )
@@ -1262,6 +1342,7 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
             user_health_html,
             opp_health_html,
             arena_html,
+            opponent_voice,
         ],
     ).then(
         fn=lambda t, s, o: (t, s, o),
@@ -1271,20 +1352,17 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
 
     submit_btn.click(
         fn=handle_turn,
-        inputs=[user_msg, topic_state, stance_state, opponent_state, chatbot, user_hp_state, opp_hp_state],
-        outputs=[user_msg, chatbot, user_hp_state, opp_hp_state, user_health_html, opp_health_html, arena_html],
-    )
-
-    user_msg.input(
-        fn=preview_player_argument,
-        inputs=[user_msg, topic_state, stance_state, opponent_state, user_hp_state, opp_hp_state],
-        outputs=[arena_html],
-    )
-
-    user_msg.submit(
-        fn=handle_turn,
-        inputs=[user_msg, topic_state, stance_state, opponent_state, chatbot, user_hp_state, opp_hp_state],
-        outputs=[user_msg, chatbot, user_hp_state, opp_hp_state, user_health_html, opp_health_html, arena_html],
+        inputs=[user_audio, topic_state, stance_state, opponent_state, chatbot, user_hp_state, opp_hp_state],
+        outputs=[
+            user_audio,
+            chatbot,
+            user_hp_state,
+            opp_hp_state,
+            user_health_html,
+            opp_health_html,
+            arena_html,
+            opponent_voice,
+        ],
     )
 
 

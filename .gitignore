@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 *.log
+dev_assets/
 
 # Training and dataset artifacts
 corpus/
