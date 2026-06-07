@@ -1047,11 +1047,13 @@ def start_debate(topic, stance, opponent):
     )
 
 
-def handle_turn(user_audio, topic, stance, opponent, chat_history, user_hp, opp_hp):
+def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, user_hp, opp_hp):
     display_name = opponent_name(opponent)
-    if not user_audio:
+    typed_arg = (user_text or "").strip()
+    if not user_audio and not typed_arg:
         return (
             None,
+            "",
             chat_history,
             user_hp,
             opp_hp,
@@ -1072,13 +1074,17 @@ def handle_turn(user_audio, topic, stance, opponent, chat_history, user_hp, opp_
             None,
         )
 
-    try:
-        user_arg = transcribe_argument(user_audio)
-    except Exception as e:
-        user_arg = ""
-        transcription_error = str(e)
-    else:
+    if typed_arg:
+        user_arg = typed_arg
         transcription_error = ""
+    else:
+        try:
+            user_arg = transcribe_argument(user_audio)
+        except Exception as e:
+            user_arg = ""
+            transcription_error = str(e)
+        else:
+            transcription_error = ""
 
     if not user_arg:
         message = "I could not transcribe that recording. Try again with a clearer argument."
@@ -1086,6 +1092,7 @@ def handle_turn(user_audio, topic, stance, opponent, chat_history, user_hp, opp_
             message = f"{message} ({transcription_error})"
         return (
             None,
+            "",
             chat_history,
             user_hp,
             opp_hp,
@@ -1132,6 +1139,7 @@ def handle_turn(user_audio, topic, stance, opponent, chat_history, user_hp, opp_
         chat_history.append({"role": "assistant", "content": turn_msg})
         return (
             None,
+            "",
             chat_history,
             user_hp,
             opp_hp,
@@ -1157,6 +1165,7 @@ def handle_turn(user_audio, topic, stance, opponent, chat_history, user_hp, opp_
         chat_history.append({"role": "assistant", "content": turn_msg})
         return (
             None,
+            "",
             chat_history,
             user_hp,
             opp_hp,
@@ -1246,6 +1255,7 @@ def handle_turn(user_audio, topic, stance, opponent, chat_history, user_hp, opp_
 
     return (
         None,
+        "",
         chat_history,
         user_hp,
         opp_hp,
@@ -1332,22 +1342,28 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
         opponent_voice = gr.Audio(label="Opponent Voice", autoplay=True, visible=False)
 
         gr.HTML(
-            '<div class="voice-hint">Record your argument, stop recording, then submit. The tribunal only processes audio after you press submit.</div>'
+            '<div class="voice-hint">Upload a recorded argument for voice mode, or type your argument if the browser recorder freezes. The tribunal only processes input after submit.</div>'
         )
 
         with gr.Row(elem_classes=["submit-row", "argument-dock"]):
             user_audio = gr.Audio(
-                sources=["microphone"],
+                sources=["upload"],
                 type="filepath",
-                label="Speak Your Argument",
+                label="Upload Spoken Argument",
                 format="wav",
                 editable=False,
-                scale=5,
+                scale=3,
                 elem_id="voice-recorder",
                 waveform_options=gr.WaveformOptions(
                     show_recording_waveform=False,
                     sample_rate=16000,
                 ),
+            )
+            user_text = gr.Textbox(
+                label="Typed Fallback",
+                placeholder="If recording freezes, type the argument here...",
+                lines=3,
+                scale=4,
             )
             submit_btn = gr.Button("Submit Argument", variant="primary", scale=1)
 
@@ -1374,9 +1390,19 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
 
     submit_btn.click(
         fn=handle_turn,
-        inputs=[user_audio, topic_state, stance_state, opponent_state, chatbot, user_hp_state, opp_hp_state],
+        inputs=[
+            user_audio,
+            user_text,
+            topic_state,
+            stance_state,
+            opponent_state,
+            chatbot,
+            user_hp_state,
+            opp_hp_state,
+        ],
         outputs=[
             user_audio,
+            user_text,
             chatbot,
             user_hp_state,
             opp_hp_state,
