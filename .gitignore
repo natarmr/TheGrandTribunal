@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.log
+
+# Training and dataset artifacts
+corpus/
+raw_corpus/
+scratch/
+*.jsonl
+*.jsonlist.gz
+corpus_chunks.jsonl
+judge_training.jsonl
+
+# Local notes and generated inspection output
+inspected_headers.txt
+search_results.txt
+verify_results.txt
