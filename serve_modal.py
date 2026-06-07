@@ -10,6 +10,7 @@ volume = modal.Volume.from_name("grand-tribunal-volume", create_if_missing=True)
 # Pre-bake the model weights into the container image to eliminate 20-30s of download time
 inference_image = (
     modal.Image.from_registry("nvidia/cuda:12.1.1-devel-ubuntu22.04", add_python="3.10")
+    .apt_install("ffmpeg")
     .pip_install(
         "vllm",
         "fastapi",
@@ -264,8 +265,10 @@ def api():
             return JSONResponse({"error": str(e)}, status_code=500)
 
     @web_app.post("/tts")
-    async def tts_endpoint(text: str = Form(...)):
+    async def tts_endpoint(request: Request):
         try:
+            data = await request.json()
+            text = data.get("text")
             if not text:
                 return JSONResponse({"error": "Missing 'text'"}, status_code=400)
 
