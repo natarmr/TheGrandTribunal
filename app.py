@@ -1,4 +1,5 @@
 import html
+import base64
 import os
 import random
 import tempfile
@@ -719,6 +720,54 @@ CSS = """
     font-weight: 700;
 }
 
+.mic-recorder {
+    padding: 12px;
+    background: #080a0f;
+    border-top: 1px solid rgba(255, 232, 142, 0.28);
+}
+
+.mic-panel {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 13px;
+    border: 1px solid rgba(255, 232, 142, 0.28);
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
+}
+
+.mic-panel button {
+    min-height: 42px;
+    padding: 0 16px;
+    border: 1px solid rgba(255, 246, 223, 0.24);
+    border-radius: 6px;
+    background: linear-gradient(180deg, #d4a34b, #a7612f);
+    color: #151312;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.mic-panel button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.mic-status {
+    color: #fff4cf;
+    font-size: 0.9rem;
+    font-weight: 800;
+}
+
+.mic-status.recording {
+    color: #ff9a7b;
+}
+
+.mic-playback {
+    min-width: min(360px, 100%);
+    height: 36px;
+}
+
 .argument-dock textarea {
     min-height: 64px !important;
 }
@@ -791,6 +840,94 @@ CSS = """
     .dialogue-line {
         font-size: 1.45rem;
     }
+}
+"""
+
+
+CUSTOM_JS = """
+() => {
+    if (window.__tribunalRecorderInstalled) return;
+    window.__tribunalRecorderInstalled = true;
+
+    let recorder = null;
+    let stream = null;
+    let chunks = [];
+
+    const setStatus = (message, recording = false) => {
+        const status = document.getElementById("mic-status");
+        if (!status) return;
+        status.textContent = message;
+        status.classList.toggle("recording", recording);
+    };
+
+    const setPayload = (value) => {
+        const root = document.getElementById("voice-payload");
+        const input = root && (root.querySelector("textarea") || root.querySelector("input"));
+        if (!input) {
+            setStatus("Recorder storage is not ready yet.");
+            return;
+        }
+        const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value");
+        if (descriptor && descriptor.set) {
+            descriptor.set.call(input, value);
+        } else {
+            input.value = value;
+        }
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+
+    const setButtons = (isRecording) => {
+        const start = document.getElementById("mic-start");
+        const stop = document.getElementById("mic-stop");
+        if (start) start.disabled = isRecording;
+        if (stop) stop.disabled = !isRecording;
+    };
+
+    document.addEventListener("click", async (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+
+        if (target.id === "mic-start") {
+            event.preventDefault();
+            try {
+                chunks = [];
+                setPayload("");
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+                    ? { mimeType: "audio/webm;codecs=opus" }
+                    : {};
+                recorder = new MediaRecorder(stream, options);
+                recorder.ondataavailable = (dataEvent) => {
+                    if (dataEvent.data && dataEvent.data.size) chunks.push(dataEvent.data);
+                };
+                recorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+                    const playback = document.getElementById("mic-playback");
+                    if (playback) playback.src = URL.createObjectURL(blob);
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setPayload(String(reader.result || ""));
+                        setStatus("Recorded. Submit when ready.");
+                    };
+                    reader.readAsDataURL(blob);
+                    if (stream) stream.getTracks().forEach((track) => track.stop());
+                    setButtons(false);
+                };
+                recorder.start();
+                setStatus("Recording...", true);
+                setButtons(true);
+            } catch (error) {
+                setStatus("Microphone unavailable: " + error.message);
+                setButtons(false);
+            }
+        }
+
+        if (target.id === "mic-stop") {
+            event.preventDefault();
+            if (recorder && recorder.state === "recording") recorder.stop();
+        }
+    });
 }
 """
 
@@ -937,16 +1074,42 @@ def calculate_fatigue(score):
     return 0
 
 
-def transcribe_argument(audio_path):
-    if not audio_path:
+def transcribe_argument(audio_payload):
+    if not audio_payload:
         return ""
 
-    with open(audio_path, "rb") as audio_file:
-        response = requests.post(
-            STT_URL,
-            files={"file": (os.path.basename(audio_path), audio_file, "audio/wav")},
-            timeout=120,
-        )
+    temp_path = None
+    if isinstance(audio_payload, str) and audio_payload.startswith("data:audio"):
+        header, encoded = audio_payload.split(",", 1)
+        mime = header.split(";", 1)[0].replace("data:", "")
+        suffix = ".webm"
+        if "wav" in mime:
+            suffix = ".wav"
+        elif "mp4" in mime or "m4a" in mime:
+            suffix = ".m4a"
+        elif "ogg" in mime:
+            suffix = ".ogg"
+        audio_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        audio_file.write(base64.b64decode(encoded))
+        audio_file.close()
+        audio_path = temp_path = audio_file.name
+    else:
+        audio_path = audio_payload
+
+    try:
+        with open(audio_path, "rb") as audio_file:
+            response = requests.post(
+                STT_URL,
+                files={"file": (os.path.basename(audio_path), audio_file, "audio/webm")},
+                timeout=120,
+            )
+    finally:
+        if temp_path:
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+
     response.raise_for_status()
     data = response.json()
     return data.get("text", "").strip()
@@ -1342,28 +1505,26 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
         opponent_voice = gr.Audio(label="Opponent Voice", autoplay=True, visible=False)
 
         gr.HTML(
-            '<div class="voice-hint">Upload a recorded argument for voice mode, or type your argument if the browser recorder freezes. The tribunal only processes input after submit.</div>'
+            """
+            <div class="voice-hint">Use the fast recorder below, stop when finished, then submit your argument.</div>
+            <div class="mic-recorder">
+                <div class="mic-panel">
+                    <button type="button" id="mic-start">Record</button>
+                    <button type="button" id="mic-stop" disabled>Stop</button>
+                    <span class="mic-status" id="mic-status">Ready</span>
+                    <audio class="mic-playback" id="mic-playback" controls></audio>
+                </div>
+            </div>
+            """
         )
+        user_audio = gr.Textbox(value="", visible="hidden", elem_id="voice-payload")
 
         with gr.Row(elem_classes=["submit-row", "argument-dock"]):
-            user_audio = gr.Audio(
-                sources=["upload"],
-                type="filepath",
-                label="Upload Spoken Argument",
-                format="wav",
-                editable=False,
-                scale=3,
-                elem_id="voice-recorder",
-                waveform_options=gr.WaveformOptions(
-                    show_recording_waveform=False,
-                    sample_rate=16000,
-                ),
-            )
             user_text = gr.Textbox(
                 label="Typed Fallback",
-                placeholder="If recording freezes, type the argument here...",
+                placeholder="Optional fallback while testing...",
                 lines=3,
-                scale=4,
+                scale=5,
             )
             submit_btn = gr.Button("Submit Argument", variant="primary", scale=1)
 
@@ -1415,4 +1576,4 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
 
 
 if __name__ == "__main__":
-    demo.launch(allowed_paths=["."], css=CSS, theme=gr.themes.Soft())
+    demo.launch(allowed_paths=["."], css=CSS, theme=gr.themes.Soft(), js=CUSTOM_JS)
