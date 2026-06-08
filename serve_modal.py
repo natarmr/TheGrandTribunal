@@ -37,8 +37,8 @@ inference_image = (
     volumes={"/vol": volume},
     min_containers=0,
     scaledown_window=900,
-    allow_concurrent_inputs=15,
 )
+@modal.concurrent(max_inputs=15)
 class TribunalModel:
     @modal.enter()
     def load_model(self):
