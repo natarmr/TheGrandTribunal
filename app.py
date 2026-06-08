@@ -848,7 +848,7 @@ CSS = """
 
 
 CUSTOM_JS = """
-() => {
+(() => {
     if (window.__tribunalRecorderInstalled) return;
     window.__tribunalRecorderInstalled = true;
 
@@ -931,7 +931,7 @@ CUSTOM_JS = """
             if (recorder && recorder.state === "recording") recorder.stop();
         }
     });
-}
+})();
 """
 
 
@@ -1104,7 +1104,7 @@ def transcribe_argument(audio_payload):
             response = requests.post(
                 STT_URL,
                 files={"file": (os.path.basename(audio_path), audio_file, "audio/webm")},
-                timeout=120,
+                timeout=240,
             )
     finally:
         if temp_path:
@@ -1122,7 +1122,7 @@ def synthesize_rebuttal_audio(text):
     if not text:
         return None
 
-    response = requests.post(TTS_URL, data={"text": text}, timeout=180)
+    response = requests.post(TTS_URL, json={"text": text}, timeout=240)
     response.raise_for_status()
 
     audio_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
@@ -1282,7 +1282,7 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
     chat_history.append({"role": "user", "content": user_arg})
 
     try:
-        j_res = requests.post(JUDGE_URL, json={"topic": topic, "argument": user_arg}).json()
+        j_res = requests.post(JUDGE_URL, json={"topic": topic, "argument": user_arg}, timeout=240).json()
         score = int(j_res.get("score", 5))
         reasoning = j_res.get("reasoning", "No reasoning provided.")
     except Exception as e:
@@ -1357,7 +1357,7 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
 
     situation_prompt = f"(Debate Topic: {topic}. The user is arguing {stance} this topic.)\nUser argues: {user_arg}\nCounter their argument fiercely."
     try:
-        c_res = requests.post(CHARACTER_URL, json={"character": opponent, "situation": situation_prompt}).json()
+        c_res = requests.post(CHARACTER_URL, json={"character": opponent, "situation": situation_prompt}, timeout=240).json()
         opp_response = c_res.get("response", "I have no words.")
     except Exception as e:
         opp_response = f"*Opponent is stunned and silent.* ({str(e)})"
@@ -1371,7 +1371,7 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
     turn_msg += f"### {display_name}'s Rebuttal\n\"{opp_response}\"\n\n"
 
     try:
-        j_res2 = requests.post(JUDGE_URL, json={"topic": topic, "argument": opp_response}).json()
+        j_res2 = requests.post(JUDGE_URL, json={"topic": topic, "argument": opp_response}, timeout=240).json()
         opp_score = int(j_res2.get("score", 5))
         opp_reasoning = j_res2.get("reasoning", "No reasoning provided.")
     except Exception as e:
@@ -1520,7 +1520,7 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
             </div>
             """
         )
-        user_audio = gr.Textbox(value="", visible="hidden", elem_id="voice-payload")
+        user_audio = gr.Textbox(value="", elem_classes=["hidden-runtime"], elem_id="voice-payload")
 
         with gr.Row(elem_classes=["submit-row", "argument-dock"]):
             user_text = gr.Textbox(

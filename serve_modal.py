@@ -184,7 +184,7 @@ class TribunalModel:
         import soundfile as sf
 
         audio = self.tts.generate(text=text, cfg_value=2.0)
-        sample_rate = 16000
+        sample_rate = 48000
 
         if isinstance(audio, dict):
             sample_rate = int(audio.get("sample_rate") or audio.get("sampling_rate") or sample_rate)
@@ -307,5 +307,19 @@ async def test_end_to_end():
     print("Argument: Happiness is merely a fleeting chemical state. True meaning is found in overcoming great struggles and leaving a legacy.")
     judge_res = await model.evaluate_judge.remote.aio("The meaning of life is just to be happy.", "Happiness is merely a fleeting chemical state. True meaning is found in overcoming great struggles and leaving a legacy.")
     print(f"\n--- Judge Score ---\n{judge_res}\n-------------------\n")
+
+    print("[4/4] Testing Speech Models (TTS -> STT Closed Loop)")
+    test_text = "The court has reached a verdict."
+    print(f"Synthesizing TTS for: '{test_text}'")
+    audio_bytes = await model.synthesize_speech.remote.aio(test_text)
+    print(f"Generated {len(audio_bytes)} bytes of audio.")
+    assert audio_bytes.startswith(b"RIFF"), "TTS failed: Audio bytes do not start with WAV magic header RIFF!"
+    print("TTS Success: Valid WAV format detected.")
+
+    print("Transcribing synthesized audio back to text...")
+    transcription = await model.transcribe_audio.remote.aio(audio_bytes, ".wav")
+    print(f"Transcription: '{transcription}'")
+    assert "court" in transcription.lower() or "verdict" in transcription.lower(), f"STT failed: Expected transcription to contain 'court' or 'verdict', got '{transcription}'"
+    print("STT Success: Correct transcription returned.")
     
     print("✅ Smoke test complete!")
