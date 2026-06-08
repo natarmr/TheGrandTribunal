@@ -3,6 +3,7 @@ import base64
 import os
 import random
 import tempfile
+import concurrent.futures
 
 import gradio as gr
 import requests
@@ -1132,7 +1133,9 @@ def synthesize_rebuttal_audio(text):
 
 
 def preview_player_argument(user_arg, topic, stance, opponent, user_hp, opp_hp):
-    prompt = user_arg.strip() if user_arg else "Make your next argument."
+    if not user_arg or not user_arg.strip():
+        return gr.update()
+    prompt = user_arg.strip()
     if len(prompt) > 140:
         prompt = prompt[:137].rstrip() + "..."
     return get_arena_html(
@@ -1144,7 +1147,7 @@ def preview_player_argument(user_arg, topic, stance, opponent, user_hp, opp_hp):
         speaker="Advocate",
         dialogue=prompt,
         active_actor="player",
-        player_pose="talking" if user_arg else "thinking",
+        player_pose="talking",
         opponent_pose="thinking",
     )
 
@@ -1281,12 +1284,38 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
 
     chat_history.append({"role": "user", "content": user_arg})
 
-    try:
-        j_res = requests.post(JUDGE_URL, json={"topic": topic, "argument": user_arg}, timeout=240).json()
+    situation_prompt = f"(Debate Topic: {topic}. The user is arguing {stance} this topic.)\nUser argues: {user_arg}\nDirectly contradict and fiercely attack the core premise of the user's argument. Do not agree with them under any circumstances."
+
+    # Parallelize Phase 1: User Argument Evaluation & Opponent Response Generation
+    def run_judge_user():
+        try:
+            return requests.post(JUDGE_URL, json={"topic": topic, "argument": user_arg}, timeout=240).json()
+        except Exception as e:
+            return {"error": str(e)}
+
+    def run_character():
+        try:
+            return requests.post(CHARACTER_URL, json={"character": opponent, "situation": situation_prompt}, timeout=240).json()
+        except Exception as e:
+            return {"error": str(e)}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        future_judge = executor.submit(run_judge_user)
+        future_char = executor.submit(run_character)
+        
+        j_res = future_judge.result()
+        c_res = future_char.result()
+
+    if "error" in j_res:
+        score, reasoning = 5, f"Tribunal failed to evaluate: {j_res['error']}"
+    else:
         score = int(j_res.get("score", 5))
         reasoning = j_res.get("reasoning", "No reasoning provided.")
-    except Exception as e:
-        score, reasoning = 5, f"Tribunal failed to evaluate: {str(e)}"
+
+    if "error" in c_res:
+        opp_response = f"*Opponent is stunned and silent.* ({c_res['error']})"
+    else:
+        opp_response = c_res.get("response", "I have no words.")
 
     damage = calculate_damage(score)
     fatigue = calculate_fatigue(score)
@@ -1355,27 +1384,40 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
 
     turn_msg += "---\n\n"
 
-    situation_prompt = f"(Debate Topic: {topic}. The user is arguing {stance} this topic.)\nUser argues: {user_arg}\nCounter their argument fiercely."
-    try:
-        c_res = requests.post(CHARACTER_URL, json={"character": opponent, "situation": situation_prompt}, timeout=240).json()
-        opp_response = c_res.get("response", "I have no words.")
-    except Exception as e:
-        opp_response = f"*Opponent is stunned and silent.* ({str(e)})"
+    # Parallelize Phase 2: Rebuttal TTS Synthesis & Rebuttal Evaluation
+    def run_tts():
+        try:
+            return synthesize_rebuttal_audio(opp_response)
+        except Exception as e:
+            return {"error": str(e)}
 
-    try:
-        opp_audio = synthesize_rebuttal_audio(opp_response)
-    except Exception as e:
+    def run_judge_opponent():
+        try:
+            return requests.post(JUDGE_URL, json={"topic": topic, "argument": opp_response}, timeout=240).json()
+        except Exception as e:
+            return {"error": str(e)}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        future_tts = executor.submit(run_tts)
+        future_judge2 = executor.submit(run_judge_opponent)
+        
+        tts_res = future_tts.result()
+        j_res2 = future_judge2.result()
+
+    if isinstance(tts_res, dict) and "error" in tts_res:
         opp_audio = None
-        opp_response = f"{opp_response}\n\n(TTS failed: {str(e)})"
+        opp_response_with_err = f"{opp_response}\n\n(TTS failed: {tts_res['error']})"
+    else:
+        opp_audio = tts_res
+        opp_response_with_err = opp_response
 
-    turn_msg += f"### {display_name}'s Rebuttal\n\"{opp_response}\"\n\n"
-
-    try:
-        j_res2 = requests.post(JUDGE_URL, json={"topic": topic, "argument": opp_response}, timeout=240).json()
+    if "error" in j_res2:
+        opp_score, opp_reasoning = 5, f"Tribunal failed to evaluate: {j_res2['error']}"
+    else:
         opp_score = int(j_res2.get("score", 5))
         opp_reasoning = j_res2.get("reasoning", "No reasoning provided.")
-    except Exception as e:
-        opp_score, opp_reasoning = 5, f"Tribunal failed to evaluate: {str(e)}"
+
+    turn_msg += f"### {display_name}'s Rebuttal\n\"{opp_response_with_err}\"\n\n"
 
     opp_damage = calculate_damage(opp_score)
     opp_fatigue = calculate_fatigue(opp_score)
@@ -1505,7 +1547,7 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
 
         chatbot = gr.Chatbot(label="Tribunal Transcript", height=500, elem_id="tribunal-chat", visible=False)
 
-        opponent_voice = gr.Audio(label="Opponent Voice", autoplay=True, visible=False)
+        opponent_voice = gr.Audio(label="Opponent Voice", autoplay=True, visible=True)
 
         gr.HTML(
             """
@@ -1576,6 +1618,45 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
             arena_html,
             opponent_voice,
         ],
+    )
+
+    user_text.submit(
+        fn=handle_turn,
+        inputs=[
+            user_audio,
+            user_text,
+            topic_state,
+            stance_state,
+            opponent_state,
+            chatbot,
+            user_hp_state,
+            opp_hp_state,
+        ],
+        outputs=[
+            user_audio,
+            user_text,
+            chatbot,
+            user_hp_state,
+            opp_hp_state,
+            user_health_html,
+            opp_health_html,
+            arena_html,
+            opponent_voice,
+        ],
+    )
+
+    user_text.change(
+        fn=preview_player_argument,
+        inputs=[
+            user_text,
+            topic_state,
+            stance_state,
+            opponent_state,
+            user_hp_state,
+            opp_hp_state,
+        ],
+        outputs=[arena_html],
+        show_progress="hidden",
     )
 
 
