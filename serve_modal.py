@@ -34,6 +34,7 @@ inference_image = (
     .run_commands("hf download openbmb/VoxCPM2")
     .run_commands("hf download openai/whisper-tiny.en")
     .add_local_file("voice.wav", "/root/voice.wav")
+    .add_local_file("tribunal_shared.py", "/root/tribunal_shared.py")
 )
 
 # =====================================================================
@@ -45,6 +46,7 @@ inference_image = (
     volumes={"/vol": volume},
     min_containers=0,
     scaledown_window=900,
+    startup_timeout=600,
 )
 @modal.concurrent(max_inputs=15)
 class TribunalModel:
@@ -63,7 +65,7 @@ class TribunalModel:
             max_cpu_loras=5,
             dtype="bfloat16",
             enforce_eager=True,
-            gpu_memory_utilization=0.45,
+            gpu_memory_utilization=0.40,
         )
         self.engine = AsyncLLMEngine.from_engine_args(engine_args)
         
@@ -187,7 +189,7 @@ class TribunalModel:
 
         ref_path = "/root/voice.wav"
         if os.path.exists(ref_path):
-            audio = self.tts.generate(text=text, prompt_wav_path=ref_path, cfg_value=2.0)
+            audio = self.tts.generate(text=text, reference_wav_path=ref_path, cfg_value=2.0)
         else:
             audio = self.tts.generate(text=text, cfg_value=2.0)
         sample_rate = 48000
