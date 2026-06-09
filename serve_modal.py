@@ -26,6 +26,7 @@ inference_image = (
     .run_commands("hf download Qwen/Qwen2.5-3B-Instruct")
     .run_commands("hf download openbmb/VoxCPM2")
     .run_commands("hf download openai/whisper-tiny.en")
+    .add_local_file("voice.wav", "/root/voice.wav")
 )
 
 # =====================================================================
@@ -184,7 +185,11 @@ class TribunalModel:
         import numpy as np
         import soundfile as sf
 
-        audio = self.tts.generate(text=text, cfg_value=2.0)
+        ref_path = "/root/voice.wav"
+        if os.path.exists(ref_path):
+            audio = self.tts.generate(text=text, reference_audio=ref_path, cfg_value=2.0)
+        else:
+            audio = self.tts.generate(text=text, cfg_value=2.0)
         sample_rate = 48000
 
         if isinstance(audio, dict):

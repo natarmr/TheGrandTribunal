@@ -493,6 +493,8 @@ CSS = """
     border: 1px solid rgba(255, 246, 223, 0.24) !important;
     font-weight: 900 !important;
     border-radius: 6px !important;
+    height: 52px !important;
+    min-height: 52px !important;
 }
 
 #tribunal-app button.secondary {
@@ -649,14 +651,16 @@ CSS = """
     position: absolute;
     z-index: 3;
     right: 24px;
-    bottom: 160px;
+    top: 150px;
     max-width: min(420px, 42vw);
-    padding: 10px 13px;
-    border-left: 4px solid #ffd45f;
-    background: rgba(11, 14, 22, 0.82);
-    color: #f8e5af;
-    font-size: 0.86rem;
-    line-height: 1.35;
+    padding: 10px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(11, 14, 22, 0.72);
+    color: #e0d0b0;
+    font-family: monospace;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    border-radius: 4px;
 }
 
 .dialogue-box {
@@ -698,14 +702,7 @@ CSS = """
     text-shadow: 0 2px 0 rgba(0, 0, 0, 0.42);
 }
 
-.dialogue-next {
-    position: absolute;
-    right: clamp(22px, 5vw, 76px);
-    bottom: 25px;
-    color: #ffda54;
-    font: 900 clamp(2rem, 4vw, 3.2rem)/1 Inter, sans-serif;
-    letter-spacing: -0.08em;
-}
+
 
 .argument-dock {
     padding: 10px 12px 12px;
@@ -714,11 +711,14 @@ CSS = """
 }
 
 .voice-hint {
-    padding: 9px 14px 0;
-    background: #080a0f;
-    color: rgba(247, 239, 224, 0.72);
-    font-size: 0.86rem;
-    font-weight: 700;
+    padding: 8px 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.38) !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .mic-recorder {
@@ -730,16 +730,18 @@ CSS = """
 .mic-panel {
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding: 13px;
-    border: 1px solid rgba(255, 232, 142, 0.28);
-    background: rgba(255, 255, 255, 0.04);
-    border-radius: 6px;
+    gap: 8px;
+    flex-wrap: nowrap;
+    padding: 0;
+    height: 52px;
+    box-sizing: border-box;
+    background: transparent;
+    border: none;
 }
 
 .mic-panel button {
-    min-height: 42px;
+    height: 36px;
+    min-height: 36px !important;
     padding: 0 16px;
     border: 1px solid rgba(255, 246, 223, 0.24);
     border-radius: 6px;
@@ -754,30 +756,38 @@ CSS = """
     opacity: 0.5;
 }
 
-.mic-status {
-    color: #fff4cf;
-    font-size: 0.9rem;
-    font-weight: 800;
+.mic-container-block {
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    min-width: 180px !important;
 }
 
-.mic-status.recording {
-    color: #ff9a7b;
-}
-
+#mic-status,
 .mic-playback {
-    min-width: min(360px, 100%);
-    height: 36px;
+    display: none !important;
 }
 
 .argument-dock textarea {
-    height: 84px !important;
-    min-height: 84px !important;
+    height: 52px !important;
+    min-height: 52px !important;
     resize: none !important;
     overflow-y: auto !important;
 }
 
 .hidden-runtime {
     display: none !important;
+}
+
+#hidden-audio {
+    position: absolute !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    z-index: -9999 !important;
 }
 
 @media (max-width: 900px) {
@@ -1027,7 +1037,8 @@ def get_arena_html(
         sprite_size_class = "player"
     verdict_html = ""
     if verdict:
-        verdict_html = f'<div class="court-verdict-strip">{html.escape(verdict)}</div>'
+        escaped_verdict = html.escape(verdict).replace("\n", "<br>")
+        verdict_html = f'<div class="court-verdict-strip">{escaped_verdict}</div>'
 
     return f"""
     <div id="court-scene" style="--court-bg: url('{file_url(bg_path)}');">
@@ -1060,7 +1071,6 @@ def get_arena_html(
         <div class="dialogue-box">
             <div class="dialogue-name">{html.escape(speaker)}</div>
             <p class="dialogue-line">{html.escape(dialogue)}</p>
-            <div class="dialogue-next">&gt;&gt;</div>
         </div>
     </div>
     """
@@ -1455,10 +1465,9 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
     chat_history.append({"role": "assistant", "content": turn_msg})
 
     verdict = (
-        f"You: {score}/10"
-        f" | {display_name}: {opp_score}/10"
-        f" | Damage taken: {opp_damage if opp_damage > 0 else 0}"
-        f" | Damage dealt: {damage if damage > 0 else 0}"
+        f"You: {score}/10 | {display_name}: {opp_score}/10\n"
+        f"Damage taken: {opp_damage if opp_damage > 0 else 0}\n"
+        f"Damage dealt: {damage if damage > 0 else 0}"
     )
 
     return (
@@ -1547,32 +1556,38 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
 
         chatbot = gr.Chatbot(label="Tribunal Transcript", height=500, elem_id="tribunal-chat", visible=False)
 
-        opponent_voice = gr.Audio(label="Opponent Voice", autoplay=True, visible=True)
+        opponent_voice = gr.Audio(label="Opponent Voice", autoplay=True, visible=True, elem_id="hidden-audio")
 
-        gr.HTML(
-            """
-            <div class="voice-hint">Use the fast recorder below, stop when finished, then submit your argument.</div>
-            <div class="mic-recorder">
-                <div class="mic-panel">
-                    <button type="button" id="mic-start">Record</button>
-                    <button type="button" id="mic-stop" disabled>Stop</button>
-                    <span class="mic-status" id="mic-status">Ready</span>
-                    <audio class="mic-playback" id="mic-playback" controls></audio>
-                </div>
-            </div>
-            """
-        )
         user_audio = gr.Textbox(value="", elem_classes=["hidden-runtime"], elem_id="voice-payload")
 
         with gr.Row(elem_classes=["submit-row", "argument-dock"]):
-            user_text = gr.Textbox(
-                label="Typed Fallback",
-                placeholder="Optional fallback while testing...",
-                lines=3,
-                max_lines=3,
-                scale=5,
+            gr.HTML(
+                """
+                <div class="mic-panel">
+                    <button type="button" id="mic-start">RECORD</button>
+                    <button type="button" id="mic-stop" disabled>STOP</button>
+                    <span class="mic-status" id="mic-status">Ready</span>
+                    <audio class="mic-playback" id="mic-playback" controls></audio>
+                </div>
+                """,
+                elem_classes=["mic-container-block"],
+                scale=1,
+                min_width=170,
             )
-            submit_btn = gr.Button("Submit Argument", variant="primary", scale=1)
+            user_text = gr.Textbox(
+                show_label=False,
+                placeholder="Optional typed fallback while testing...",
+                lines=1,
+                max_lines=1,
+                scale=8,
+            )
+            submit_btn = gr.Button("SUBMIT ARGUMENT", variant="primary", scale=2)
+
+        gr.HTML(
+            """
+            <div class="voice-hint">USE THE FAST RECORDER BELOW, STOP WHEN FINISHED, THEN SUBMIT YOUR ARGUMENT.</div>
+            """
+        )
 
     start_btn.click(
         fn=start_debate,
