@@ -16,3 +16,11 @@ judge_training.jsonl
 inspected_headers.txt
 search_results.txt
 verify_results.txt
+
+# Security-sensitive local files
+.env
+.env.*
+*.pth
+*.bin
+*.safetensors
+auth.json

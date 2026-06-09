@@ -1,11 +1,18 @@
 import os
 import json
 import modal
-from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
+
+from tribunal_shared import GENERIC_MODAL_ERROR, get_character_display_names
 
 app = modal.App("grand-tribunal-inference")
 volume = modal.Volume.from_name("grand-tribunal-volume", create_if_missing=True)
+CHARACTER_DISPLAY_NAMES = get_character_display_names()
+
+
+def internal_error_response():
+    return JSONResponse({"error": GENERIC_MODAL_ERROR}, status_code=500)
 
 # Pre-bake the model weights into the container image to eliminate 20-30s of download time
 inference_image = (
@@ -79,13 +86,6 @@ class TribunalModel:
             else:
                 print(f"Warning: Adapter for {char_name} not found!")
 
-        self.display_names = {
-            "oscar_wilde": "Oscar Wilde",
-            "friedrich_nietzsche": "Friedrich Nietzsche",
-            "plato": "Plato",
-            "schopenhauer": "Arthur Schopenhauer",
-        }
-
         print("Loading speech models on the shared A10G...")
         from transformers import pipeline
         from voxcpm import VoxCPM
@@ -137,7 +137,7 @@ class TribunalModel:
         if character not in self.adapters:
             raise ValueError(f"Unknown or missing adapter for character: {character}")
 
-        display_name = self.display_names.get(character, character.replace("_", " ").title())
+        display_name = CHARACTER_DISPLAY_NAMES.get(character, character.replace("_", " ").title())
         system_prompt = f"You are {display_name}. First, identify the core logical premise or underlying meaning of the opponent's argument. Then, attack that core premise directly in your characteristic style and voice. Do not get distracted by surface-level details. Output a JSON object with 'response' (your verbal reply, 1-3 sentences) and 'expression' ('neutral' or 'objecting')."
         
         tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-3B-Instruct")
@@ -187,7 +187,7 @@ class TribunalModel:
 
         ref_path = "/root/voice.wav"
         if os.path.exists(ref_path):
-            audio = self.tts.generate(text=text, reference_audio=ref_path, cfg_value=2.0)
+            audio = self.tts.generate(text=text, prompt_wav_path=ref_path, cfg_value=2.0)
         else:
             audio = self.tts.generate(text=text, cfg_value=2.0)
         sample_rate = 48000
@@ -233,9 +233,9 @@ def api():
                 return JSONResponse(parsed)
             except json.JSONDecodeError:
                 return JSONResponse({"raw_response": result, "error": "Failed to parse JSON"})
-                
-        except Exception as e:
-            return JSONResponse({"error": str(e)}, status_code=500)
+
+        except Exception:
+            return internal_error_response()
 
     @web_app.post("/character")
     async def character_endpoint(request: Request):
@@ -255,9 +255,9 @@ def api():
                 return JSONResponse(parsed)
             except json.JSONDecodeError:
                 return JSONResponse({"raw_response": result, "error": "Failed to parse JSON"})
-                
-        except Exception as e:
-            return JSONResponse({"error": str(e)}, status_code=500)
+
+        except Exception:
+            return internal_error_response()
 
     @web_app.post("/stt")
     async def stt_endpoint(file: UploadFile = File(...)):
@@ -267,8 +267,8 @@ def api():
             model = TribunalModel()
             text = await model.transcribe_audio.remote.aio(audio_bytes, suffix)
             return JSONResponse({"text": text})
-        except Exception as e:
-            return JSONResponse({"error": str(e)}, status_code=500)
+        except Exception:
+            return internal_error_response()
 
     @web_app.post("/tts")
     async def tts_endpoint(request: Request):
@@ -285,8 +285,8 @@ def api():
                 media_type="audio/wav",
                 headers={"Content-Disposition": "inline; filename=tribunal_reply.wav"},
             )
-        except Exception as e:
-            return JSONResponse({"error": str(e)}, status_code=500)
+        except Exception:
+            return internal_error_response()
 
     return web_app
 

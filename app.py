@@ -8,46 +8,21 @@ import concurrent.futures
 import gradio as gr
 import requests
 
+from tribunal_shared import (
+    CHARACTER_REGISTRY as OPPONENTS,
+    GENERIC_MODAL_ERROR,
+    INVALID_ARGUMENT_MESSAGE,
+    MODAL_ENDPOINTS,
+    clamp_argument,
+    looks_like_bad_transcript,
+    looks_like_prompt_injection,
+)
 
-JUDGE_URL = "https://ramratanpadhy59--grand-tribunal-inference-api.modal.run/judge"
-CHARACTER_URL = "https://ramratanpadhy59--grand-tribunal-inference-api.modal.run/character"
-STT_URL = "https://ramratanpadhy59--grand-tribunal-inference-api.modal.run/stt"
-TTS_URL = "https://ramratanpadhy59--grand-tribunal-inference-api.modal.run/tts"
-
-OPPONENTS = {
-    "oscar_wilde": {
-        "name": "Oscar Wilde",
-        "image": "oscar_wilde.png",
-        "sprite": "wilde",
-        "sprite_scale": "wide",
-        "epithet": "The Velvet Saboteur",
-        "school": "Aesthetic wit and elegant contradiction",
-    },
-    "friedrich_nietzsche": {
-        "name": "Friedrich Nietzsche",
-        "image": "nietzsche.png",
-        "sprite": "nietzsche",
-        "sprite_scale": "tall",
-        "epithet": "The Hammer of Certainty",
-        "school": "Genealogy, will, and merciless revaluation",
-    },
-    "plato": {
-        "name": "Plato",
-        "image": "socrates.png",
-        "sprite": "plato",
-        "sprite_scale": "tall",
-        "epithet": "The Keeper of Forms",
-        "school": "Dialectic, justice, and ideal truth",
-    },
-    "schopenhauer": {
-        "name": "Arthur Schopenhauer",
-        "image": "schopenhauer.png",
-        "sprite": "schopenhauer",
-        "sprite_scale": "tall",
-        "epithet": "The Pessimist Laureate",
-        "school": "Will, suffering, and the limits of desire",
-    },
-}
+JUDGE_URL = MODAL_ENDPOINTS["judge"]
+CHARACTER_URL = MODAL_ENDPOINTS["character"]
+STT_URL = MODAL_ENDPOINTS["stt"]
+TTS_URL = MODAL_ENDPOINTS["tts"]
+REQUEST_TIMEOUT = 240
 
 
 CSS = """
@@ -981,6 +956,7 @@ def get_roster_html():
                 <img src="{file_url(data["image"])}" alt="{html.escape(data["name"])}">
                 <strong>{html.escape(data["name"])}</strong>
                 <span>{html.escape(data["epithet"])}</span>
+                <span>{html.escape(data["school"])}</span>
             </div>
             """
         )
@@ -1088,9 +1064,79 @@ def calculate_fatigue(score):
     return 0
 
 
+def post_modal_json(url, payload):
+    try:
+        response = requests.post(url, json=payload, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+        return response.json()
+    except Exception:
+        return {"error": GENERIC_MODAL_ERROR}
+
+
+def build_scene_update(
+    user_audio,
+    user_text,
+    chat_history,
+    user_hp,
+    opp_hp,
+    opponent,
+    topic,
+    stance,
+    speaker,
+    dialogue,
+    active_actor,
+    opponent_pose,
+    player_pose,
+    verdict=None,
+    opp_audio=None,
+):
+    display_name = opponent_name(opponent)
+    return (
+        user_audio,
+        user_text,
+        chat_history,
+        user_hp,
+        opp_hp,
+        get_health_bar_html(user_hp, "You", True),
+        get_health_bar_html(opp_hp, display_name, False),
+        get_arena_html(
+            user_hp=user_hp,
+            opp_hp=opp_hp,
+            opponent=opponent,
+            topic=topic,
+            stance=stance,
+            speaker=speaker,
+            dialogue=dialogue,
+            active_actor=active_actor,
+            opponent_pose=opponent_pose,
+            player_pose=player_pose,
+            verdict=verdict,
+        ),
+        opp_audio,
+    )
+
+
+def build_scene_error(user_audio, user_text, chat_history, user_hp, opp_hp, opponent, topic, stance, dialogue):
+    return build_scene_update(
+        user_audio,
+        user_text,
+        chat_history,
+        user_hp,
+        opp_hp,
+        opponent,
+        topic,
+        stance,
+        speaker="Advocate",
+        dialogue=dialogue,
+        active_actor="player",
+        opponent_pose="thinking",
+        player_pose="thinking",
+    )
+
+
 def transcribe_argument(audio_payload):
     if not audio_payload:
-        return ""
+        return "", GENERIC_MODAL_ERROR
 
     temp_path = None
     if isinstance(audio_payload, str) and audio_payload.startswith("data:audio"):
@@ -1115,26 +1161,31 @@ def transcribe_argument(audio_payload):
             response = requests.post(
                 STT_URL,
                 files={"file": (os.path.basename(audio_path), audio_file, "audio/webm")},
-                timeout=240,
+                timeout=REQUEST_TIMEOUT,
             )
+            response.raise_for_status()
+            data = response.json()
+        text = data.get("text", "").strip()
+    except Exception:
+        return "", GENERIC_MODAL_ERROR
     finally:
         if temp_path:
             try:
                 os.remove(temp_path)
             except OSError:
                 pass
-
-    response.raise_for_status()
-    data = response.json()
-    return data.get("text", "").strip()
+    return text, ""
 
 
 def synthesize_rebuttal_audio(text):
     if not text:
         return None
 
-    response = requests.post(TTS_URL, json={"text": text}, timeout=240)
-    response.raise_for_status()
+    try:
+        response = requests.post(TTS_URL, json={"text": text}, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+    except Exception:
+        return {"error": GENERIC_MODAL_ERROR}
 
     audio_file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
     audio_file.write(response.content)
@@ -1228,68 +1279,74 @@ def start_debate(topic, stance, opponent):
 
 def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, user_hp, opp_hp):
     display_name = opponent_name(opponent)
-    typed_arg = (user_text or "").strip()
+    typed_arg = clamp_argument(user_text)
     if not user_audio and not typed_arg:
-        return (
+        return build_scene_error(
             None,
             "",
             chat_history,
             user_hp,
             opp_hp,
-            get_health_bar_html(user_hp, "You", True),
-            get_health_bar_html(opp_hp, display_name, False),
-            get_arena_html(
-                user_hp=user_hp,
-                opp_hp=opp_hp,
-                opponent=opponent,
-                topic=topic,
-                stance=stance,
-                speaker="Advocate",
-                dialogue="State your argument when ready.",
-                active_actor="player",
-                player_pose="thinking",
-                opponent_pose="thinking",
-            ),
-            None,
+            opponent,
+            topic,
+            stance,
+            "State your argument when ready.",
         )
 
     if typed_arg:
         user_arg = typed_arg
-        transcription_error = ""
     else:
-        try:
-            user_arg = transcribe_argument(user_audio)
-        except Exception as e:
-            user_arg = ""
-            transcription_error = str(e)
-        else:
-            transcription_error = ""
-
-    if not user_arg:
-        message = "I could not transcribe that recording. Try again with a clearer argument."
+        user_arg, transcription_error = transcribe_argument(user_audio)
         if transcription_error:
-            message = f"{message} ({transcription_error})"
-        return (
+            return build_scene_error(
+                None,
+                "",
+                chat_history,
+                user_hp,
+                opp_hp,
+                opponent,
+                topic,
+                stance,
+                "I could not transcribe that recording. Try again with a clearer argument.",
+            )
+
+        if looks_like_bad_transcript(user_arg):
+            return build_scene_error(
+                None,
+                "",
+                chat_history,
+                user_hp,
+                opp_hp,
+                opponent,
+                topic,
+                stance,
+                "That recording sounded like noise or a filler phrase. Please try again with a clearer argument.",
+            )
+
+    if looks_like_prompt_injection(user_arg):
+        return build_scene_error(
             None,
             "",
             chat_history,
             user_hp,
             opp_hp,
-            get_health_bar_html(user_hp, "You", True),
-            get_health_bar_html(opp_hp, display_name, False),
-            get_arena_html(
-                user_hp=user_hp,
-                opp_hp=opp_hp,
-                opponent=opponent,
-                topic=topic,
-                stance=stance,
-                speaker="Advocate",
-                dialogue=message,
-                active_actor="player",
-                player_pose="thinking",
-                opponent_pose="thinking",
-            ),
+            opponent,
+            topic,
+            stance,
+            INVALID_ARGUMENT_MESSAGE,
+        )
+
+    if not user_arg:
+        return build_scene_error(
             None,
+            "",
+            chat_history,
+            user_hp,
+            opp_hp,
+            opponent,
+            topic,
+            stance,
+            "I could not transcribe that recording. Try again with a clearer argument.",
         )
 
     chat_history.append({"role": "user", "content": user_arg})
@@ -1298,34 +1355,27 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
 
     # Parallelize Phase 1: User Argument Evaluation & Opponent Response Generation
     def run_judge_user():
-        try:
-            return requests.post(JUDGE_URL, json={"topic": topic, "argument": user_arg}, timeout=240).json()
-        except Exception as e:
-            return {"error": str(e)}
+        return post_modal_json(JUDGE_URL, {"topic": topic, "argument": user_arg})
 
     def run_character():
-        try:
-            return requests.post(CHARACTER_URL, json={"character": opponent, "situation": situation_prompt}, timeout=240).json()
-        except Exception as e:
-            return {"error": str(e)}
+        return post_modal_json(CHARACTER_URL, {"character": opponent, "situation": situation_prompt})
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         future_judge = executor.submit(run_judge_user)
         future_char = executor.submit(run_character)
-        
         j_res = future_judge.result()
         c_res = future_char.result()
 
     if "error" in j_res:
-        score, reasoning = 5, f"Tribunal failed to evaluate: {j_res['error']}"
+        score, reasoning = 5, "Tribunal failed to evaluate the argument."
     else:
         score = int(j_res.get("score", 5))
         reasoning = j_res.get("reasoning", "No reasoning provided.")
 
     if "error" in c_res:
-        opp_response = f"*Opponent is stunned and silent.* ({c_res['error']})"
+        opp_response = GENERIC_MODAL_ERROR
     else:
-        opp_response = c_res.get("response", "I have no words.")
+        opp_response = c_res.get("response", GENERIC_MODAL_ERROR)
 
     damage = calculate_damage(score)
     fatigue = calculate_fatigue(score)
@@ -1342,87 +1392,66 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
     if opp_hp == 0:
         turn_msg += f"**Victory.** {display_name} has been defeated."
         chat_history.append({"role": "assistant", "content": turn_msg})
-        return (
+        return build_scene_update(
             None,
             "",
             chat_history,
             user_hp,
             opp_hp,
-            get_health_bar_html(user_hp, "You", True),
-            get_health_bar_html(opp_hp, display_name, False),
-            get_arena_html(
-                user_hp=user_hp,
-                opp_hp=opp_hp,
-                opponent=opponent,
-                topic=topic,
-                stance=stance,
-                speaker="Advocate",
-                dialogue=f"{display_name} has been defeated. The motion stands with you.",
-                active_actor="player",
-                opponent_pose="damage",
-                player_pose="victory",
-                verdict=f"Your score: {score}/10. Damage dealt: {damage}.",
-            ),
-            None,
+            opponent,
+            topic,
+            stance,
+            speaker="Advocate",
+            dialogue=f"{display_name} has been defeated. The motion stands with you.",
+            active_actor="player",
+            opponent_pose="damage",
+            player_pose="victory",
+            verdict=f"Your score: {score}/10. Damage dealt: {damage}.",
         )
     if user_hp == 0:
         turn_msg += "**Defeat.** Your logic has crumbled."
         chat_history.append({"role": "assistant", "content": turn_msg})
-        return (
+        return build_scene_update(
             None,
             "",
             chat_history,
             user_hp,
             opp_hp,
-            get_health_bar_html(user_hp, "You", True),
-            get_health_bar_html(opp_hp, display_name, False),
-            get_arena_html(
-                user_hp=user_hp,
-                opp_hp=opp_hp,
-                opponent=opponent,
-                topic=topic,
-                stance=stance,
-                speaker="Advocate",
-                dialogue="Your argument collapses under scrutiny.",
-                active_actor="player",
-                opponent_pose="victory",
-                player_pose="damage",
-                verdict=f"Your score: {score}/10. Fatigue suffered: {fatigue}.",
-            ),
-            None,
+            opponent,
+            topic,
+            stance,
+            speaker="Advocate",
+            dialogue="Your argument collapses under scrutiny.",
+            active_actor="player",
+            opponent_pose="victory",
+            player_pose="damage",
+            verdict=f"Your score: {score}/10. Fatigue suffered: {fatigue}.",
         )
 
     turn_msg += "---\n\n"
 
     # Parallelize Phase 2: Rebuttal TTS Synthesis & Rebuttal Evaluation
     def run_tts():
-        try:
-            return synthesize_rebuttal_audio(opp_response)
-        except Exception as e:
-            return {"error": str(e)}
+        return synthesize_rebuttal_audio(opp_response)
 
     def run_judge_opponent():
-        try:
-            return requests.post(JUDGE_URL, json={"topic": topic, "argument": opp_response}, timeout=240).json()
-        except Exception as e:
-            return {"error": str(e)}
+        return post_modal_json(JUDGE_URL, {"topic": topic, "argument": opp_response})
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         future_tts = executor.submit(run_tts)
         future_judge2 = executor.submit(run_judge_opponent)
-        
         tts_res = future_tts.result()
         j_res2 = future_judge2.result()
 
     if isinstance(tts_res, dict) and "error" in tts_res:
         opp_audio = None
-        opp_response_with_err = f"{opp_response}\n\n(TTS failed: {tts_res['error']})"
+        opp_response_with_err = f"{opp_response}\n\n({GENERIC_MODAL_ERROR})"
     else:
         opp_audio = tts_res
         opp_response_with_err = opp_response
 
     if "error" in j_res2:
-        opp_score, opp_reasoning = 5, f"Tribunal failed to evaluate: {j_res2['error']}"
+        opp_score, opp_reasoning = 5, "Tribunal failed to evaluate the rebuttal."
     else:
         opp_score = int(j_res2.get("score", 5))
         opp_reasoning = j_res2.get("reasoning", "No reasoning provided.")
@@ -1457,7 +1486,7 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
         player_pose = "victory"
     else:
         scene_speaker = display_name
-        scene_dialogue = opp_response
+        scene_dialogue = opp_response_with_err if opp_audio is None else opp_response
         active_actor = "opponent"
         opponent_pose = "talking" if opp_damage > 0 else "damage"
         player_pose = "damage" if opp_damage > 0 else "thinking"
@@ -1470,28 +1499,22 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
         f"Damage dealt: {damage if damage > 0 else 0}"
     )
 
-    return (
+    return build_scene_update(
         None,
         "",
         chat_history,
         user_hp,
         opp_hp,
-        get_health_bar_html(user_hp, "You", True),
-        get_health_bar_html(opp_hp, display_name, False),
-        get_arena_html(
-            user_hp=user_hp,
-            opp_hp=opp_hp,
-            opponent=opponent,
-            topic=topic,
-            stance=stance,
-            speaker=scene_speaker,
-            dialogue=scene_dialogue,
-            active_actor=active_actor,
-            opponent_pose=opponent_pose,
-            player_pose=player_pose,
-            verdict=verdict,
-        ),
-        opp_audio,
+        opponent,
+        topic,
+        stance,
+        speaker=scene_speaker,
+        dialogue=scene_dialogue,
+        active_actor=active_actor,
+        opponent_pose=opponent_pose,
+        player_pose=player_pose,
+        verdict=verdict,
+        opp_audio=opp_audio,
     )
 
 
