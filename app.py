@@ -25,6 +25,16 @@ TTS_URL = MODAL_ENDPOINTS["tts"]
 REQUEST_TIMEOUT = 240
 
 
+def load_asset_data_uri(filename, mime_type):
+    asset_path = os.path.join(os.path.dirname(__file__), filename)
+    with open(asset_path, "rb") as asset_file:
+        encoded = base64.b64encode(asset_file.read()).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
+
+
+LANDING_LOGO_DATA_URI = load_asset_data_uri("logo.jpg", "image/jpeg")
+
+
 CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@400;500;700;800&display=swap');
 
@@ -765,6 +775,286 @@ CSS = """
     z-index: -9999 !important;
 }
 
+html,
+body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100%;
+    min-height: 100%;
+    overflow-x: hidden;
+    background: #111111 !important;
+}
+
+.gradio-container {
+    min-height: 100vh !important;
+    padding: 0 !important;
+    background: #111111 !important;
+}
+
+#tribunal-app {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 100vh;
+}
+
+#tribunal-app .wrap {
+    gap: 14px;
+}
+
+#landing-view {
+    min-height: 100vh !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background:
+        linear-gradient(180deg, rgba(18, 18, 18, 0.98), rgba(15, 15, 15, 0.98)),
+        #111111 !important;
+    box-shadow: none !important;
+}
+
+#landing-view .wrap {
+    gap: 0 !important;
+}
+
+#landing-header {
+    height: 90px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 0 clamp(28px, 5vw, 92px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        inset 0 -1px 0 rgba(255, 255, 255, 0.03),
+        0 1px 0 rgba(255, 255, 255, 0.04);
+    background: #121212;
+}
+
+#landing-brand {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    min-width: 0;
+}
+
+#landing-brand img {
+    display: block;
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    flex: 0 0 auto;
+}
+
+#landing-brand-title {
+    color: #d6d0c6;
+    font-family: Cinzel, serif;
+    font-size: clamp(1.9rem, 3vw, 3.1rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+#landing-stage {
+    flex: 1 1 auto;
+    display: grid;
+    place-items: center;
+    padding: 82px clamp(18px, 3.8vw, 56px) 60px;
+}
+
+#landing-stage .wrap {
+    gap: 0 !important;
+}
+
+#docket-card {
+    position: relative;
+    width: min(92vw, 1440px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 10px;
+    background:
+        linear-gradient(180deg, rgba(28, 28, 28, 0.99), rgba(22, 22, 22, 0.99)),
+        #171717;
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+    padding: 48px 0 44px;
+}
+
+#docket-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.04), transparent 42%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%);
+}
+
+#docket-inner {
+    position: relative;
+    z-index: 1;
+    width: min(58vw, 860px);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.field-label {
+    margin: 0 0 14px;
+    color: rgba(255, 255, 255, 0.5);
+    font-family: "Space Mono", monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.34em;
+    text-transform: uppercase;
+}
+
+#topic-input,
+#stance-input,
+#opponent-input,
+#start-btn {
+    width: 100%;
+}
+
+#topic-input {
+    margin: 0 0 26px;
+}
+
+#stance-input {
+    margin: 0 0 22px;
+}
+
+#opponent-input {
+    margin: 0 0 58px;
+}
+
+#topic-input textarea,
+#stance-input input,
+#stance-input button,
+#stance-input [role="combobox"],
+#opponent-input input,
+#opponent-input button,
+#opponent-input [role="combobox"] {
+    width: 100% !important;
+    background: #111111 !important;
+    color: #ddd6ca !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+#topic-input textarea {
+    min-height: 146px !important;
+    padding: 20px 20px 18px !important;
+    color: #dcdcdc !important;
+    font-family: Inter, system-ui, sans-serif !important;
+    font-size: 1.02rem !important;
+    line-height: 1.4 !important;
+}
+
+#topic-input textarea::placeholder {
+    color: rgba(255, 255, 255, 0.78) !important;
+    font-weight: 700 !important;
+}
+
+#stance-input input,
+#stance-input button,
+#stance-input [role="combobox"] {
+    min-height: 76px !important;
+    padding: 0 18px !important;
+    color: #e3dccf !important;
+    font-family: Cinzel, serif !important;
+    font-size: clamp(1.55rem, 2vw, 1.9rem) !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    text-transform: uppercase !important;
+}
+
+#opponent-input input,
+#opponent-input button,
+#opponent-input [role="combobox"] {
+    min-height: 100px !important;
+    padding: 0 18px !important;
+    color: #e3dccf !important;
+    font-family: Cinzel, serif !important;
+    font-size: clamp(1.15rem, 1.7vw, 1.45rem) !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+}
+
+#stance-input *,
+#opponent-input * {
+    background: transparent !important;
+}
+
+ul[role="listbox"] {
+    background: #151515 !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5) !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+}
+
+li[data-testid="dropdown-option"] {
+    color: #e2dbcf !important;
+    font-family: Cinzel, serif !important;
+    font-size: 1.2rem !important;
+    line-height: 1.2 !important;
+    padding: 16px 20px !important;
+    opacity: 1 !important;
+}
+
+#tribunal-app [role="listbox"],
+#tribunal-app [role="option"],
+#tribunal-app [data-testid="dropdown-option"] {
+    background-clip: padding-box !important;
+}
+
+li[data-testid="dropdown-option"]:hover,
+li[data-testid="dropdown-option"][aria-selected="true"] {
+    background: rgba(201, 154, 62, 0.18) !important;
+}
+
+#start-btn {
+    margin-top: 0;
+}
+
+#start-btn button {
+    width: 100% !important;
+    min-height: 104px !important;
+    border: 2px solid rgba(201, 154, 62, 0.36) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: #d7ac43 !important;
+    font-family: Cinzel, serif !important;
+    font-size: clamp(1.35rem, 2vw, 1.8rem) !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.22em !important;
+    text-transform: uppercase !important;
+    box-shadow:
+        inset 0 0 0 1px rgba(201, 154, 62, 0.12),
+        0 0 0 1px rgba(201, 154, 62, 0.12);
+}
+
+#start-btn button:hover {
+    border-color: rgba(233, 189, 105, 0.68) !important;
+    box-shadow:
+        inset 0 0 0 1px rgba(233, 189, 105, 0.18),
+        0 0 22px rgba(233, 189, 105, 0.12);
+}
+
+#error-box {
+    min-height: 0 !important;
+}
+
 @media (max-width: 900px) {
     #landing-view,
     .arena-stage,
@@ -773,9 +1063,75 @@ CSS = """
     }
 
     #landing-view {
-        min-height: auto;
-        padding: 22px;
-        gap: 18px;
+        min-height: 100vh !important;
+        padding: 0 !important;
+        gap: 0 !important;
+    }
+
+    #landing-header {
+        height: 80px;
+        padding: 0 18px;
+    }
+
+    #landing-brand {
+        gap: 12px;
+    }
+
+    #landing-brand img {
+        width: 36px;
+        height: 36px;
+    }
+
+    #landing-stage {
+        padding: 32px 12px 20px;
+    }
+
+    #docket-card {
+        width: 100%;
+        padding: 28px 0 24px;
+        border-radius: 8px;
+    }
+
+    #docket-inner {
+        width: min(100%, 760px);
+        padding: 0 16px;
+    }
+
+    #topic-input {
+        margin-bottom: 18px;
+    }
+
+    #stance-input {
+        margin-bottom: 16px;
+    }
+
+    #opponent-input {
+        margin-bottom: 28px;
+    }
+
+    #topic-input textarea {
+        min-height: 118px !important;
+        padding: 16px !important;
+        font-size: 0.95rem !important;
+    }
+
+    #stance-input input,
+    #stance-input button,
+    #stance-input [role="combobox"] {
+        min-height: 64px !important;
+        font-size: 1.3rem !important;
+    }
+
+    #opponent-input input,
+    #opponent-input button,
+    #opponent-input [role="combobox"] {
+        min-height: 82px !important;
+        font-size: 1.05rem !important;
+    }
+
+    #start-btn button {
+        min-height: 88px !important;
+        font-size: 1.05rem !important;
     }
 
     .opponent-roster,
@@ -1527,49 +1883,52 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
 
     with gr.Column(visible=True, elem_id="landing-view") as setup_area:
         gr.HTML(
-            """
-            <div class="hero-copy">
-                <span class="kicker">AI-powered dialectical combat</span>
-                <h1>The Grand Tribunal</h1>
-                <p>
-                    Enter a turn-based battle of wit, where the tribunal scores the force of each argument
-                    and history's sharpest minds answer from across the bench.
-                </p>
-                <div class="hero-statline">
-                    <span>100 HP each</span>
-                    <span>Score 5+ deals damage</span>
-                    <span>Weak logic causes fatigue</span>
+            f"""
+            <header id="landing-header">
+                <div id="landing-brand">
+                    <img src="{LANDING_LOGO_DATA_URI}" alt="The Grand Tribunal">
+                    <div id="landing-brand-title">THE GRAND TRIBUNAL</div>
                 </div>
-            </div>
+            </header>
             """
         )
-        with gr.Column(elem_classes="setup-panel"):
-            gr.HTML(
-                """
-                <h2 class="setup-title">Set the docket</h2>
-                <p class="setup-subtitle">The whole opening move now lives here: motion, stance, opponent, then straight into the arena.</p>
-                """
-            )
-            topic_input = gr.Textbox(
-                label="Debate Topic",
-                placeholder="e.g. The pursuit of happiness is the highest good.",
-                lines=3,
-            )
-            stance_input = gr.Radio(["For", "Against"], label="Your Stance", value="For", scale=1)
-
-            opponent_input = gr.Radio(
-                choices=[
-                    ("Oscar Wilde", "oscar_wilde"),
-                    ("Nietzsche", "friedrich_nietzsche"),
-                    ("Plato", "plato"),
-                    ("Schopenhauer", "schopenhauer"),
-                ],
-                label="Select Opponent",
-                value="oscar_wilde",
-            )
-            gr.HTML(get_roster_html())
-            start_btn = gr.Button("Enter the Tribunal", variant="primary")
-            error_box = gr.HTML("", visible=True)
+        with gr.Column(elem_id="landing-stage"):
+            with gr.Column(elem_id="docket-card"):
+                with gr.Column(elem_id="docket-inner"):
+                    gr.HTML('<div class="field-label">DEBATE TOPIC</div>')
+                    topic_input = gr.Textbox(
+                        label="Debate Topic",
+                        placeholder="Enter the subject of your philosophical contention...",
+                        lines=4,
+                        show_label=False,
+                        container=False,
+                        elem_id="topic-input",
+                    )
+                    gr.HTML('<div class="field-label">YOUR STANCE</div>')
+                    stance_input = gr.Dropdown(
+                        choices=[("FOR", "For"), ("AGAINST", "Against")],
+                        label="Your Stance",
+                        value="For",
+                        show_label=False,
+                        container=False,
+                        elem_id="stance-input",
+                    )
+                    gr.HTML('<div class="field-label">SELECT OPPONENT</div>')
+                    opponent_input = gr.Dropdown(
+                        choices=[
+                            ("Oscar Wilde", "oscar_wilde"),
+                            ("Nietzsche", "friedrich_nietzsche"),
+                            ("Plato", "plato"),
+                            ("Schopenhauer", "schopenhauer"),
+                        ],
+                        label="Select Opponent",
+                        value="friedrich_nietzsche",
+                        show_label=False,
+                        container=False,
+                        elem_id="opponent-input",
+                    )
+                    start_btn = gr.Button("ENTER THE TRIBUNAL ->", variant="secondary", elem_id="start-btn")
+                    error_box = gr.HTML("", visible=False, elem_id="error-box")
 
     with gr.Column(visible=False, elem_classes="debate-shell") as debate_area:
         arena_html = gr.HTML(get_arena_html())
@@ -1602,7 +1961,7 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
                 placeholder="Optional typed fallback while testing...",
                 lines=1,
                 max_lines=1,
-                scale=8,
+                scale=7,
             )
             submit_btn = gr.Button("SUBMIT ARGUMENT", variant="primary", scale=2)
 
