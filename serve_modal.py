@@ -42,7 +42,7 @@ inference_image = (
 # =====================================================================
 @app.cls(
     image=inference_image,
-    gpu="a10g",
+    gpu="a100-40gb",
     volumes={"/vol": volume},
     min_containers=0,
     scaledown_window=900,
