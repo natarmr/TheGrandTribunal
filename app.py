@@ -808,6 +808,14 @@ body {
     min-height: 100vh;
 }
 
+#tribunal-app .main,
+#tribunal-app .app,
+#tribunal-app .contain,
+#tribunal-app .block {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
 #tribunal-app .wrap {
     gap: 14px;
 }
@@ -1927,7 +1935,7 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
     )
 
 
-with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
+with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft(), fill_height=True) as demo:
     topic_state = gr.State("")
     stance_state = gr.State("")
     opponent_state = gr.State("")
