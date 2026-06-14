@@ -2111,4 +2111,11 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
 
 
 if __name__ == "__main__":
-    demo.launch(allowed_paths=["."], css=CSS, theme=gr.themes.Soft(), js=CUSTOM_JS)
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=int(os.environ.get("PORT", 7860)),
+        allowed_paths=["."],
+        css=CSS,
+        theme=gr.themes.Soft(),
+        js=CUSTOM_JS,
+    )
