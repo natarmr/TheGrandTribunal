@@ -1420,6 +1420,42 @@ def calculate_fatigue(score):
     return 0
 
 
+def _coerce_judge_int(value, fallback, minimum, maximum):
+    try:
+        coerced = int(round(float(value)))
+    except (TypeError, ValueError):
+        coerced = fallback
+    return max(minimum, min(maximum, coerced))
+
+
+def summarize_judge_result(j_res):
+    if not isinstance(j_res, dict) or "error" in j_res:
+        return {
+            "score": 5,
+            "raw_score": 5,
+            "logic": 5,
+            "relevance": 5,
+            "creativity": 3,
+            "reasoning": "Tribunal failed to evaluate the argument.",
+        }
+
+    raw_score = _coerce_judge_int(j_res.get("score", 5), 5, 1, 10)
+    logic = _coerce_judge_int(j_res.get("logic", raw_score), raw_score, 1, 10)
+    relevance = _coerce_judge_int(j_res.get("relevance", raw_score), raw_score, 1, 10)
+    creativity = _coerce_judge_int(j_res.get("creativity", 3), 3, 1, 5)
+    creativity_scaled = creativity * 2
+    composite = round((raw_score + logic + relevance + creativity_scaled) / 4)
+
+    return {
+        "score": max(1, min(10, composite)),
+        "raw_score": raw_score,
+        "logic": logic,
+        "relevance": relevance,
+        "creativity": creativity,
+        "reasoning": str(j_res.get("reasoning", "No reasoning provided.")),
+    }
+
+
 def post_modal_json(url, payload):
     try:
         response = requests.post(url, json=payload, timeout=REQUEST_TIMEOUT)
@@ -1722,11 +1758,9 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
         j_res = future_judge.result()
         c_res = future_char.result()
 
-    if "error" in j_res:
-        score, reasoning = 5, "Tribunal failed to evaluate the argument."
-    else:
-        score = int(j_res.get("score", 5))
-        reasoning = j_res.get("reasoning", "No reasoning provided.")
+    user_judge = summarize_judge_result(j_res)
+    score = user_judge["score"]
+    reasoning = user_judge["reasoning"]
 
     if "error" in c_res:
         opp_response = GENERIC_MODAL_ERROR
@@ -1806,11 +1840,9 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
         opp_audio = tts_res
         opp_response_with_err = opp_response
 
-    if "error" in j_res2:
-        opp_score, opp_reasoning = 5, "Tribunal failed to evaluate the rebuttal."
-    else:
-        opp_score = int(j_res2.get("score", 5))
-        opp_reasoning = j_res2.get("reasoning", "No reasoning provided.")
+    opp_judge = summarize_judge_result(j_res2)
+    opp_score = opp_judge["score"]
+    opp_reasoning = opp_judge["reasoning"]
 
     turn_msg += f"### {display_name}'s Rebuttal\n\"{opp_response_with_err}\"\n\n"
 

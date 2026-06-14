@@ -119,7 +119,7 @@ class TribunalModel:
         if "judge" not in self.adapters:
             raise ValueError("Judge adapter is missing from volume!")
 
-        system_prompt = "You are the Grand Tribunal Judge. Score the argument on the topic across five axes: score (1-10), logic (1-10), relevance (1-10), creativity (1-5), and reasoning (one sentence explaining the score). Reply strictly in JSON."
+        system_prompt = "You are the Grand Tribunal Judge. Score the argument on the topic across five axes: score (1-10), logic (1-10), relevance (1-10), creativity (1-5), and reasoning (one sentence explaining the score). The score must be the overall verdict and should reflect the other axes rather than ignore them. Reply strictly in JSON."
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Topic: {topic}\nArgument: {argument}"}
