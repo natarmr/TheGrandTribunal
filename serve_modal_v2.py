@@ -228,7 +228,7 @@ class TribunalModel:
 web_app = FastAPI(title="The Grand Tribunal Inference API")
 
 @app.function(image=inference_image, min_containers=0, scaledown_window=900)
-@modal.asgi_app()
+@modal.asgi_app(requires_proxy_auth=True)
 def api():
     @web_app.post("/judge")
     async def judge_endpoint(request: Request):
@@ -277,7 +277,7 @@ def api():
             return internal_error_response()
 
     @web_app.post("/stt")
-    async def stt_endpoint(file: UploadFile = File(...)):
+    async def stt_endpoint(request: Request, file: UploadFile = File(...)):
         try:
             audio_bytes = await file.read()
             suffix = os.path.splitext(file.filename or "")[1] or ".wav"

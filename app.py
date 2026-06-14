@@ -23,6 +23,16 @@ CHARACTER_URL = MODAL_ENDPOINTS["character"]
 STT_URL = MODAL_ENDPOINTS["stt"]
 TTS_URL = MODAL_ENDPOINTS["tts"]
 REQUEST_TIMEOUT = 240
+MODAL_PROXY_AUTH_TOKEN_ID_ENV = "MODAL_PROXY_AUTH_TOKEN_ID"
+MODAL_PROXY_AUTH_TOKEN_SECRET_ENV = "MODAL_PROXY_AUTH_TOKEN_SECRET"
+
+
+def get_modal_proxy_auth_headers():
+    token_id = os.environ.get(MODAL_PROXY_AUTH_TOKEN_ID_ENV, "").strip()
+    token_secret = os.environ.get(MODAL_PROXY_AUTH_TOKEN_SECRET_ENV, "").strip()
+    if not token_id or not token_secret:
+        return {}
+    return {"Modal-Key": token_id, "Modal-Secret": token_secret}
 
 
 def load_asset_data_uri(filename, mime_type):
@@ -1458,7 +1468,12 @@ def summarize_judge_result(j_res):
 
 def post_modal_json(url, payload):
     try:
-        response = requests.post(url, json=payload, timeout=REQUEST_TIMEOUT)
+        response = requests.post(
+            url,
+            json=payload,
+            headers=get_modal_proxy_auth_headers(),
+            timeout=REQUEST_TIMEOUT,
+        )
         response.raise_for_status()
         return response.json()
     except Exception:
@@ -1553,6 +1568,7 @@ def transcribe_argument(audio_payload):
             response = requests.post(
                 STT_URL,
                 files={"file": (os.path.basename(audio_path), audio_file, "audio/webm")},
+                headers=get_modal_proxy_auth_headers(),
                 timeout=REQUEST_TIMEOUT,
             )
             response.raise_for_status()
@@ -1574,7 +1590,12 @@ def synthesize_rebuttal_audio(text):
         return None
 
     try:
-        response = requests.post(TTS_URL, json={"text": text}, timeout=REQUEST_TIMEOUT)
+        response = requests.post(
+            TTS_URL,
+            json={"text": text},
+            headers=get_modal_proxy_auth_headers(),
+            timeout=REQUEST_TIMEOUT,
+        )
         response.raise_for_status()
     except Exception:
         return {"error": GENERIC_MODAL_ERROR}
