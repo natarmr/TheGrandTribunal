@@ -1,9 +1,11 @@
-import html
+from __future__ import annotations
+
 import base64
+import concurrent.futures
+import html
 import os
 import random
 import tempfile
-import concurrent.futures
 
 import gradio as gr
 import requests
@@ -51,459 +53,205 @@ CSS = """
 :root {
     --ink: #111318;
     --paper: #f7efe0;
-    --parchment: #efe2c6;
-    --wine: #611f31;
-    --vermilion: #b44633;
     --gold: #c99a3e;
     --jade: #2f8c68;
-    --smoke: #27313c;
-    --line: rgba(32, 27, 20, 0.18);
 }
 
-.gradio-container {
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100%;
+    overflow-x: hidden;
+    background: #111111 !important;
+}
+
+.gradio-container,
+.gradio-container > .main {
     max-width: none !important;
-    background:
-        linear-gradient(115deg, rgba(17, 19, 24, 0.92), rgba(55, 30, 35, 0.82)),
-        repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 30px),
-        #16191f !important;
+    min-height: auto !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
+    background: #111111 !important;
     color: var(--paper);
     font-family: Inter, system-ui, sans-serif;
 }
 
 #tribunal-app {
-    max-width: 1380px;
-    margin: 0 auto;
-    padding: 18px clamp(12px, 2vw, 28px) 28px;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    height: auto !important;
 }
 
-#tribunal-app .contain,
+#tribunal-app .block,
 #tribunal-app .form,
-#tribunal-app .block {
-    border-radius: 6px !important;
-}
-
-#tribunal-app label,
-#tribunal-app .label-wrap span {
-    color: #f2dfb7 !important;
-    font-weight: 800 !important;
-    letter-spacing: 0 !important;
+#tribunal-app .column,
+#tribunal-app .wrap,
+#tribunal-app .gap {
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
 }
 
 #tribunal-app textarea,
 #tribunal-app input,
 #tribunal-app select {
-    background: rgba(247, 239, 224, 0.96) !important;
-    color: var(--ink) !important;
-    border: 1px solid rgba(201, 154, 62, 0.45) !important;
-    border-radius: 6px !important;
-}
-
-#tribunal-app .wrap.svelte-1ipelgc {
-    gap: 14px;
+    background: #111111 !important;
+    color: #ddd6ca !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 8px !important;
 }
 
 #landing-view {
-    position: relative;
-    min-height: min(720px, calc(100vh - 42px));
-    display: grid !important;
-    grid-template-columns: minmax(360px, 0.92fr) minmax(420px, 0.72fr) !important;
-    align-items: center !important;
-    gap: clamp(18px, 4vw, 62px) !important;
-    overflow: hidden;
-    border: 1px solid rgba(201, 154, 62, 0.34);
-    background:
-        radial-gradient(circle at 72% 20%, rgba(201, 154, 62, 0.12), transparent 28%),
-        linear-gradient(90deg, rgba(16, 18, 22, 0.96), rgba(31, 22, 22, 0.84) 54%, rgba(12, 13, 16, 0.9)),
-        #171a20;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-    padding: clamp(22px, 5vw, 72px);
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    border: 0 !important;
+    background: linear-gradient(180deg, rgba(18, 18, 18, 0.98), rgba(15, 15, 15, 0.98)), #111111 !important;
 }
 
 #landing-view.hide,
 #landing-view.hidden,
-#landing-view[hidden],
-#landing-view[style*="display: none"],
-#landing-view[style*="visibility: hidden"],
-#landing-view[aria-hidden="true"] {
+#landing-view[hidden] {
     display: none !important;
-    min-height: 0 !important;
-    height: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border: 0 !important;
-    overflow: hidden !important;
 }
 
-#landing-view:after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 86px;
-    background: linear-gradient(180deg, transparent, rgba(10, 11, 14, 0.84));
-    pointer-events: none;
-}
-
-.hero-copy {
-    position: relative;
-    z-index: 1;
+#landing-header {
+    height: 90px;
+    flex: 0 0 auto;
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    align-items: center;
+    padding: 0 clamp(28px, 5vw, 92px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    background: #121212;
+}
+
+#landing-brand {
+    display: flex;
+    align-items: center;
+    gap: 18px;
     min-width: 0;
 }
 
-#landing-view > * {
-    min-width: 0 !important;
+#landing-brand img {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
 }
 
-.kicker,
-.stage-kicker {
-    color: #e9bd69;
-    font-size: 0.78rem;
-    font-weight: 900;
+#landing-brand-title {
+    color: #d6d0c6;
+    font-family: Cinzel, serif;
+    font-size: clamp(1.9rem, 3vw, 3.1rem);
+    font-weight: 700;
     letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+#landing-stage {
+    flex: 0 0 auto !important;
+    display: grid;
+    place-items: start center;
+    padding: 24px 16px 32px !important;
+}
+
+#docket-card {
+    width: min(92vw, 860px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(28, 28, 28, 0.99), rgba(22, 22, 22, 0.99)), #171717;
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45);
+    padding: 32px 0 28px;
+}
+
+#docket-inner {
+    width: min(100%, 760px);
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.field-label {
+    margin: 0 0 10px;
+    color: rgba(255, 255, 255, 0.5);
+    font-family: "Space Mono", monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.34em;
     text-transform: uppercase;
 }
 
-.hero-copy h1 {
-    margin: 10px 0 10px;
-    color: #fff7e8;
-    font: 900 clamp(3.15rem, 7vw, 6.6rem)/0.9 Cinzel, serif;
-    letter-spacing: 0;
-    max-width: 760px;
+#topic-input { margin: 0 0 16px !important; }
+#stance-input { margin: 0 0 16px !important; }
+#opponent-input { margin: 0 0 20px !important; }
+
+#topic-input textarea {
+    min-height: 120px !important;
+    padding: 16px !important;
+    font-size: 1rem !important;
+    line-height: 1.4 !important;
 }
 
-.hero-copy p {
-    max-width: 560px;
-    margin: 0;
-    color: rgba(247, 239, 224, 0.82);
-    font-size: clamp(0.98rem, 1.6vw, 1.18rem);
-    line-height: 1.55;
+#stance-input input,
+#stance-input button,
+#stance-input [role="combobox"] {
+    min-height: 64px !important;
+    padding: 0 16px !important;
+    font-family: Cinzel, serif !important;
+    font-size: 1.35rem !important;
+    text-transform: uppercase !important;
 }
 
-.hero-statline {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 24px;
+#opponent-input input,
+#opponent-input button,
+#opponent-input [role="combobox"] {
+    min-height: 72px !important;
+    padding: 0 16px !important;
+    font-family: Cinzel, serif !important;
+    font-size: 1.1rem !important;
 }
 
-.hero-statline span {
-    border: 1px solid rgba(201, 154, 62, 0.42);
-    background: rgba(17, 19, 24, 0.64);
-    color: #f5d99b;
-    border-radius: 999px;
-    padding: 7px 12px;
-    font-size: 0.78rem;
-    font-weight: 800;
-}
-
-.debate-shell {
-    margin-top: 14px;
-    padding: clamp(12px, 2vw, 22px);
-    border: 1px solid rgba(201, 154, 62, 0.3);
-    background: rgba(17, 19, 24, 0.74);
-}
-
-.setup-panel {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    padding: clamp(16px, 2.3vw, 26px);
-    border: 1px solid rgba(201, 154, 62, 0.42);
-    border-radius: 6px;
-    background:
-        linear-gradient(180deg, rgba(247, 239, 224, 0.13), rgba(247, 239, 224, 0.045)),
-        rgba(11, 12, 15, 0.72);
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.26);
-    backdrop-filter: blur(10px);
-}
-
-.setup-title,
-.panel-title {
-    margin: 0 0 12px;
-    color: #fff2d8;
-    font: 800 1.02rem/1.2 Cinzel, serif;
-}
-
-.setup-subtitle {
-    margin: -4px 0 16px;
-    color: rgba(247, 239, 224, 0.68);
-    font-size: 0.86rem;
-    line-height: 1.4;
-}
-
-.opponent-roster {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.opponent-chip {
-    min-height: 118px;
-    overflow: hidden;
-    border: 1px solid rgba(201, 154, 62, 0.3);
-    background: linear-gradient(180deg, rgba(239, 226, 198, 0.1), rgba(10, 11, 14, 0.4));
-    border-radius: 6px;
-    position: relative;
-}
-
-.opponent-chip img {
-    width: 100%;
-    height: 78px;
-    object-fit: cover;
-    object-position: top center;
-    filter: saturate(0.92) contrast(1.05);
-}
-
-.opponent-chip strong,
-.opponent-chip span {
-    display: block;
-    padding: 0 10px;
-}
-
-.opponent-chip strong {
-    margin-top: 7px;
-    color: #fff5de;
-    font-size: 0.84rem;
-}
-
-.opponent-chip span {
-    color: rgba(247, 239, 224, 0.68);
-    font-size: 0.72rem;
-    padding-bottom: 8px;
-}
-
-.setup-panel .form,
-.setup-panel .block {
+#start-btn button {
+    width: 100% !important;
+    min-height: 88px !important;
+    border: 2px solid rgba(201, 154, 62, 0.36) !important;
+    border-radius: 0 !important;
     background: transparent !important;
+    color: #d7ac43 !important;
+    font-family: Cinzel, serif !important;
+    font-size: 1.2rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.22em !important;
+    text-transform: uppercase !important;
 }
 
-.setup-panel .radio-group {
-    gap: 8px !important;
+ul[role="listbox"] {
+    background: #151515 !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 8px !important;
 }
 
-.arena-stage {
-    display: grid;
-    grid-template-columns: minmax(160px, 0.7fr) minmax(220px, 1fr) minmax(160px, 0.7fr);
-    min-height: 360px;
-    border: 1px solid rgba(201, 154, 62, 0.36);
-    background:
-        linear-gradient(180deg, rgba(29, 33, 39, 0.74), rgba(7, 8, 10, 0.9)),
-        repeating-linear-gradient(0deg, rgba(239, 226, 198, 0.08) 0, rgba(239, 226, 198, 0.08) 1px, transparent 1px, transparent 26px);
-    overflow: hidden;
-    border-radius: 6px;
+li[data-testid="dropdown-option"] {
+    color: #e2dbcf !important;
+    font-family: Cinzel, serif !important;
+    padding: 14px 18px !important;
 }
 
-.combatant {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    min-width: 0;
-}
-
-.combatant.user {
-    padding: 22px;
-    background: linear-gradient(155deg, rgba(47, 140, 104, 0.28), transparent 58%);
-}
-
-.combatant.opponent {
-    padding: 0 0 0 18px;
-    align-items: flex-end;
-    background: linear-gradient(205deg, rgba(180, 70, 51, 0.24), transparent 58%);
-}
-
-.speaker-mark {
-    width: min(72%, 230px);
-    aspect-ratio: 1;
-    display: grid;
-    place-items: center;
-    border: 2px solid rgba(233, 189, 105, 0.45);
-    background: rgba(17, 19, 24, 0.52);
-    color: #f3dfb8;
-    font: 900 clamp(3rem, 8vw, 6rem)/1 Cinzel, serif;
-}
-
-.combatant img {
-    width: min(100%, 370px);
-    max-height: 360px;
-    object-fit: contain;
-    object-position: bottom right;
-    filter: drop-shadow(-16px 20px 22px rgba(0, 0, 0, 0.48));
-}
-
-.nameplate {
-    position: relative;
-    z-index: 1;
-    width: min(100%, 300px);
-    margin-top: 12px;
-    padding: 10px 12px;
-    border-top: 2px solid rgba(201, 154, 62, 0.6);
-    background: rgba(8, 9, 12, 0.72);
-}
-
-.nameplate strong {
-    display: block;
-    color: #fff7e8;
-    font: 800 1rem/1.1 Cinzel, serif;
-}
-
-.nameplate span {
-    color: rgba(247, 239, 224, 0.68);
-    font-size: 0.76rem;
-}
-
-.topic-docket {
-    padding: 26px 18px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    background: linear-gradient(180deg, rgba(239, 226, 198, 0.13), rgba(17, 19, 24, 0));
-    min-width: 0;
-}
-
-.topic-docket h2 {
-    margin: 10px 0 6px;
-    color: #fff7e8;
-    font: 800 clamp(1.4rem, 3vw, 2.4rem)/1.02 Cinzel, serif;
-    letter-spacing: 0;
-    overflow-wrap: anywhere;
-}
-
-.topic-docket p {
-    margin: 0;
-    color: rgba(247, 239, 224, 0.72);
-    line-height: 1.45;
-    overflow-wrap: anywhere;
-}
-
-.stance-pill {
-    margin-top: 14px;
-    padding: 7px 12px;
-    border: 1px solid rgba(201, 154, 62, 0.45);
-    color: #f5d99b;
-    font-weight: 900;
-    border-radius: 999px;
-    background: rgba(17, 19, 24, 0.48);
-}
-
-.vitals-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 12px;
-}
-
-.health-card {
-    padding: 11px;
-    border: 1px solid rgba(201, 154, 62, 0.3);
-    background: rgba(9, 10, 13, 0.66);
-    border-radius: 6px;
-}
-
-.health-card.right {
-    text-align: right;
-}
-
-.health-label {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 8px;
-    color: #fff1d5;
-    font-weight: 900;
-    font-size: 0.88rem;
-}
-
-.health-card.right .health-label {
-    flex-direction: row-reverse;
-}
-
-.health-track {
-    height: 22px;
-    overflow: hidden;
-    border: 2px solid rgba(247, 239, 224, 0.18);
-    background: #08090b;
-    border-radius: 3px;
-}
-
-.health-fill {
-    height: 100%;
-    min-width: 0;
-    transition: width 0.35s ease;
-    background: linear-gradient(90deg, var(--jade), #9ed66f);
-}
-
-.health-fill.warning {
-    background: linear-gradient(90deg, #cc7a2f, #f0bf5b);
-}
-
-.health-fill.danger {
-    background: linear-gradient(90deg, #9d2932, #e35d45);
-}
-
-#tribunal-chat {
-    border: 1px solid rgba(201, 154, 62, 0.34);
-    background: rgba(247, 239, 224, 0.94);
-    border-radius: 6px;
-}
-
-#tribunal-chat .message {
-    border-radius: 6px !important;
-}
-
-#tribunal-chat .bot {
-    background: #fff8eb !important;
-    color: var(--ink) !important;
-    border: 1px solid rgba(97, 31, 49, 0.16) !important;
-}
-
-#tribunal-chat .user {
-    background: #e8f2ec !important;
-    color: var(--ink) !important;
-    border: 1px solid rgba(47, 140, 104, 0.18) !important;
-}
-
-.submit-row {
-    align-items: end;
-}
-
-#submit-argument {
-    min-height: 96px;
-}
-
-#voice-recorder {
-    min-height: 96px;
-}
-
-#tribunal-app button.primary {
-    background: linear-gradient(180deg, #d4a34b, #a7612f) !important;
-    color: #151312 !important;
-    border: 1px solid rgba(255, 246, 223, 0.24) !important;
-    font-weight: 900 !important;
-    border-radius: 6px !important;
-    height: 52px !important;
-    min-height: 52px !important;
-}
-
-#tribunal-app button.secondary {
-    border-radius: 6px !important;
-}
-
-.error-text {
-    color: #ffd08a;
-    font-weight: 800;
-}
+.error-text { color: #ffd08a; font-weight: 800; }
 
 .debate-shell {
-    margin-top: 0;
-    padding: 0;
+    margin: 0 !important;
+    padding: 0 !important;
     border: 1px solid rgba(245, 197, 79, 0.42);
     background: #06070a;
     overflow: hidden;
@@ -511,23 +259,13 @@ CSS = """
 
 #court-scene {
     position: relative;
-    min-height: min(760px, calc(100vh - 84px));
+    min-height: min(720px, 85vh);
     overflow: hidden;
     border-radius: 6px;
     background:
         linear-gradient(180deg, rgba(255,255,255,0.06), transparent 26%),
         var(--court-bg) center / cover no-repeat,
         #b18115;
-}
-
-#court-scene:before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-        linear-gradient(90deg, rgba(0,0,0,0.22), transparent 32%, rgba(0,0,0,0.1)),
-        repeating-linear-gradient(0deg, rgba(0,0,0,0.055) 0, rgba(0,0,0,0.055) 1px, transparent 1px, transparent 5px);
-    pointer-events: none;
 }
 
 .court-hud {
@@ -539,59 +277,26 @@ CSS = """
     display: grid;
     grid-template-columns: minmax(180px, 0.7fr) minmax(220px, 1fr) minmax(180px, 0.7fr);
     gap: 14px;
-    align-items: start;
 }
 
-.court-docket {
-    min-width: 0;
-    padding: 10px 14px;
-    border: 2px solid rgba(255, 232, 142, 0.72);
-    background: rgba(10, 12, 18, 0.72);
-    color: #fff4cf;
-    text-align: center;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.26);
-}
-
-.court-docket strong,
-.court-docket span {
-    display: block;
-    overflow-wrap: anywhere;
-}
-
-.court-docket strong {
-    font: 900 0.78rem/1.1 Inter, sans-serif;
-    color: #ffd56e;
-    text-transform: uppercase;
-}
-
-.court-docket span {
-    margin-top: 4px;
-    font: 800 clamp(0.88rem, 1.7vw, 1.2rem)/1.15 Cinzel, serif;
-}
-
+.court-docket,
 .court-fighter {
-    padding: 10px 12px 12px;
+    padding: 10px 12px;
     border: 2px solid rgba(255, 232, 142, 0.72);
     background: rgba(8, 11, 17, 0.78);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
+    color: #fff7de;
 }
 
-.court-fighter.right {
-    text-align: right;
-}
+.court-docket { text-align: center; }
+.court-fighter.right { text-align: right; }
 
 .court-fighter-label {
     display: flex;
     justify-content: space-between;
     gap: 10px;
-    color: #fff7de;
     font-weight: 900;
     font-size: 0.9rem;
     text-transform: uppercase;
-}
-
-.court-fighter.right .court-fighter-label {
-    flex-direction: row-reverse;
 }
 
 .court-hp-track {
@@ -607,13 +312,8 @@ CSS = """
     background: linear-gradient(90deg, #18b974, #f2dc63);
 }
 
-.court-hp-fill.warning {
-    background: linear-gradient(90deg, #d98520, #f6d46a);
-}
-
-.court-hp-fill.danger {
-    background: linear-gradient(90deg, #b51f32, #ff785e);
-}
+.court-hp-fill.warning { background: linear-gradient(90deg, #d98520, #f6d46a); }
+.court-hp-fill.danger { background: linear-gradient(90deg, #b51f32, #ff785e); }
 
 .court-character {
     position: absolute;
@@ -624,16 +324,6 @@ CSS = """
     max-height: calc(100% - 285px);
     object-fit: contain;
     object-position: bottom left;
-    filter: drop-shadow(20px 20px 18px rgba(0, 0, 0, 0.45));
-    image-rendering: auto;
-}
-
-.court-character.wide {
-    width: min(46vw, 470px);
-}
-
-.court-character.tall {
-    width: min(43vw, 560px);
 }
 
 .court-character.player {
@@ -649,13 +339,10 @@ CSS = """
     top: 150px;
     max-width: min(420px, 42vw);
     padding: 10px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(11, 14, 22, 0.72);
     color: #e0d0b0;
     font-family: monospace;
     font-size: 0.8rem;
-    line-height: 1.4;
-    border-radius: 4px;
 }
 
 .dialogue-box {
@@ -667,11 +354,8 @@ CSS = """
     min-height: 170px;
     padding: 34px clamp(24px, 8vw, 150px) 24px;
     border-top: 3px solid rgba(255, 255, 255, 0.9);
-    background:
-        linear-gradient(90deg, rgba(3, 12, 26, 0.94), rgba(10, 17, 30, 0.82)),
-        repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 6px);
+    background: linear-gradient(90deg, rgba(3, 12, 26, 0.94), rgba(10, 17, 30, 0.82));
     color: white;
-    box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.36);
 }
 
 .dialogue-name {
@@ -680,44 +364,20 @@ CSS = """
     left: clamp(24px, 8vw, 150px);
     min-width: 210px;
     padding: 8px 28px 9px;
-    color: white;
     font: 700 1.55rem/1 Cinzel, serif;
     background: linear-gradient(180deg, #3c9bc3, #257fa7);
     border: 2px solid white;
-    clip-path: polygon(8% 0, 92% 0, 100% 50%, 92% 100%, 8% 100%, 0 50%);
     text-align: center;
-    text-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
 }
 
 .dialogue-line {
     margin: 0;
     max-width: 1120px;
-    font: 500 clamp(1.65rem, 3.7vw, 2.9rem)/1.2 Georgia, "Times New Roman", serif;
-    color: #fff;
-    text-shadow: 0 2px 0 rgba(0, 0, 0, 0.42);
+    font: 500 clamp(1.4rem, 3vw, 2.4rem)/1.2 Georgia, serif;
 }
-
-
 
 .argument-dock {
     padding: 10px 12px 12px;
-    background: #080a0f;
-    border-top: 1px solid rgba(255, 232, 142, 0.28);
-}
-
-.voice-hint {
-    padding: 8px 0;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.38) !important;
-    font-size: 0.75rem !important;
-    font-weight: 600 !important;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.mic-recorder {
-    padding: 12px;
     background: #080a0f;
     border-top: 1px solid rgba(255, 232, 142, 0.28);
 }
@@ -726,19 +386,13 @@ CSS = """
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: nowrap;
-    padding: 0;
     height: 52px;
-    box-sizing: border-box;
-    background: transparent;
-    border: none;
 }
 
 .mic-panel button {
     height: 36px;
     min-height: 36px !important;
     padding: 0 16px;
-    border: 1px solid rgba(255, 246, 223, 0.24);
     border-radius: 6px;
     background: linear-gradient(180deg, #d4a34b, #a7612f);
     color: #151312;
@@ -746,32 +400,16 @@ CSS = """
     cursor: pointer;
 }
 
-.mic-panel button:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
+#tribunal-app button.primary {
+    background: linear-gradient(180deg, #d4a34b, #a7612f) !important;
+    color: #151312 !important;
+    font-weight: 900 !important;
+    min-height: 52px !important;
 }
 
-.mic-container-block {
-    padding: 0 !important;
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    min-width: 180px !important;
-}
-
+.hidden-runtime,
 #mic-status,
 .mic-playback {
-    display: none !important;
-}
-
-.argument-dock textarea {
-    height: 52px !important;
-    min-height: 52px !important;
-    resize: none !important;
-    overflow-y: auto !important;
-}
-
-.hidden-runtime {
     display: none !important;
 }
 
@@ -782,427 +420,30 @@ CSS = """
     width: 1px !important;
     height: 1px !important;
     overflow: hidden !important;
-    z-index: -9999 !important;
 }
 
-html,
-body {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100%;
-    min-height: 100%;
-    overflow-x: hidden;
-    background: #111111 !important;
-}
-
-.gradio-container {
-    min-height: 100vh !important;
-    padding: 0 !important;
-    background: #111111 !important;
-}
-
-#tribunal-app {
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    min-height: 100vh;
-}
-
-#tribunal-app .main,
-#tribunal-app .app,
-#tribunal-app .contain,
-#tribunal-app .block {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-}
-
-#tribunal-app .wrap {
-    gap: 14px;
-}
-
-#landing-view {
-    min-height: 100vh !important;
-    padding: 0 !important;
-    gap: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden;
-    border: 0 !important;
-    border-radius: 0 !important;
-    background:
-        linear-gradient(180deg, rgba(18, 18, 18, 0.98), rgba(15, 15, 15, 0.98)),
-        #111111 !important;
-    box-shadow: none !important;
-}
-
-#landing-view .wrap {
-    gap: 0 !important;
-}
-
-#landing-header {
-    height: 90px;
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    padding: 0 clamp(28px, 5vw, 92px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow:
-        inset 0 -1px 0 rgba(255, 255, 255, 0.03),
-        0 1px 0 rgba(255, 255, 255, 0.04);
-    background: #121212;
-}
-
-#landing-brand {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    min-width: 0;
-}
-
-#landing-brand img {
-    display: block;
-    width: 42px;
-    height: 42px;
-    object-fit: contain;
-    flex: 0 0 auto;
-}
-
-#landing-brand-title {
-    color: #d6d0c6;
-    font-family: Cinzel, serif;
-    font-size: clamp(1.9rem, 3vw, 3.1rem);
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: 0.08em;
+.voice-hint {
+    padding: 8px 0;
+    color: rgba(255, 255, 255, 0.38) !important;
+    font-size: 0.75rem !important;
+    text-align: center;
     text-transform: uppercase;
-    white-space: nowrap;
-}
-
-#landing-stage {
-    flex: 1 1 auto;
-    display: grid;
-    place-items: center;
-    padding: 82px clamp(18px, 3.8vw, 56px) 60px;
-}
-
-#landing-stage .wrap {
-    gap: 0 !important;
-}
-
-#docket-card {
-    position: relative;
-    width: min(92vw, 1440px);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 10px;
-    background:
-        linear-gradient(180deg, rgba(28, 28, 28, 0.99), rgba(22, 22, 22, 0.99)),
-        #171717;
-    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45);
-    overflow: hidden;
-    padding: 48px 0 44px;
-}
-
-#docket-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background:
-        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.04), transparent 42%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%);
-}
-
-#docket-inner {
-    position: relative;
-    z-index: 1;
-    width: min(58vw, 860px);
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-
-.field-label {
-    margin: 0 0 14px;
-    color: rgba(255, 255, 255, 0.5);
-    font-family: "Space Mono", monospace;
-    font-size: 0.8rem;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: 0.34em;
-    text-transform: uppercase;
-}
-
-#topic-input,
-#stance-input,
-#opponent-input,
-#start-btn {
-    width: 100%;
-}
-
-#topic-input {
-    margin: 0 0 26px;
-}
-
-#stance-input {
-    margin: 0 0 22px;
-}
-
-#opponent-input {
-    margin: 0 0 58px;
-}
-
-#topic-input textarea,
-#stance-input input,
-#stance-input button,
-#stance-input [role="combobox"],
-#opponent-input input,
-#opponent-input button,
-#opponent-input [role="combobox"] {
-    width: 100% !important;
-    background: #111111 !important;
-    color: #ddd6ca !important;
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
-    border-radius: 8px !important;
-    box-shadow: none !important;
-    outline: none !important;
-}
-
-#topic-input textarea {
-    min-height: 146px !important;
-    padding: 20px 20px 18px !important;
-    color: #dcdcdc !important;
-    font-family: Inter, system-ui, sans-serif !important;
-    font-size: 1.02rem !important;
-    line-height: 1.4 !important;
-}
-
-#topic-input textarea::placeholder {
-    color: rgba(255, 255, 255, 0.78) !important;
-    font-weight: 700 !important;
-}
-
-#stance-input input,
-#stance-input button,
-#stance-input [role="combobox"] {
-    min-height: 76px !important;
-    padding: 0 18px !important;
-    color: #e3dccf !important;
-    font-family: Cinzel, serif !important;
-    font-size: clamp(1.55rem, 2vw, 1.9rem) !important;
-    font-weight: 500 !important;
-    letter-spacing: 0 !important;
-    text-transform: uppercase !important;
-}
-
-#opponent-input input,
-#opponent-input button,
-#opponent-input [role="combobox"] {
-    min-height: 100px !important;
-    padding: 0 18px !important;
-    color: #e3dccf !important;
-    font-family: Cinzel, serif !important;
-    font-size: clamp(1.15rem, 1.7vw, 1.45rem) !important;
-    font-weight: 500 !important;
-    letter-spacing: 0 !important;
-}
-
-#stance-input *,
-#opponent-input * {
-    background: transparent !important;
-}
-
-ul[role="listbox"] {
-    background: #151515 !important;
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
-    border-radius: 8px !important;
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5) !important;
-    opacity: 1 !important;
-    backdrop-filter: none !important;
-}
-
-li[data-testid="dropdown-option"] {
-    color: #e2dbcf !important;
-    font-family: Cinzel, serif !important;
-    font-size: 1.2rem !important;
-    line-height: 1.2 !important;
-    padding: 16px 20px !important;
-    opacity: 1 !important;
-}
-
-#tribunal-app [role="listbox"],
-#tribunal-app [role="option"],
-#tribunal-app [data-testid="dropdown-option"] {
-    background-clip: padding-box !important;
-}
-
-li[data-testid="dropdown-option"]:hover,
-li[data-testid="dropdown-option"][aria-selected="true"] {
-    background: rgba(201, 154, 62, 0.18) !important;
-}
-
-#start-btn {
-    margin-top: 0;
-}
-
-#start-btn button {
-    width: 100% !important;
-    min-height: 104px !important;
-    border: 2px solid rgba(201, 154, 62, 0.36) !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-    color: #d7ac43 !important;
-    font-family: Cinzel, serif !important;
-    font-size: clamp(1.35rem, 2vw, 1.8rem) !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.22em !important;
-    text-transform: uppercase !important;
-    box-shadow:
-        inset 0 0 0 1px rgba(201, 154, 62, 0.12),
-        0 0 0 1px rgba(201, 154, 62, 0.12);
-}
-
-#start-btn button:hover {
-    border-color: rgba(233, 189, 105, 0.68) !important;
-    box-shadow:
-        inset 0 0 0 1px rgba(233, 189, 105, 0.18),
-        0 0 22px rgba(233, 189, 105, 0.12);
-}
-
-#error-box {
-    min-height: 0 !important;
 }
 
 @media (max-width: 900px) {
-    #landing-view,
-    .arena-stage,
-    .court-hud {
-        grid-template-columns: 1fr !important;
-    }
-
-    #landing-view {
-        min-height: 100vh !important;
-        padding: 0 !important;
-        gap: 0 !important;
-    }
-
-    #landing-header {
-        height: 80px;
-        padding: 0 18px;
-    }
-
-    #landing-brand {
-        gap: 12px;
-    }
-
-    #landing-brand img {
-        width: 36px;
-        height: 36px;
-    }
-
-    #landing-stage {
-        padding: 32px 12px 20px;
-    }
-
-    #docket-card {
-        width: 100%;
-        padding: 28px 0 24px;
-        border-radius: 8px;
-    }
-
-    #docket-inner {
-        width: min(100%, 760px);
-        padding: 0 16px;
-    }
-
-    #topic-input {
-        margin-bottom: 18px;
-    }
-
-    #stance-input {
-        margin-bottom: 16px;
-    }
-
-    #opponent-input {
-        margin-bottom: 28px;
-    }
-
-    #topic-input textarea {
-        min-height: 118px !important;
-        padding: 16px !important;
-        font-size: 0.95rem !important;
-    }
-
-    #stance-input input,
-    #stance-input button,
-    #stance-input [role="combobox"] {
-        min-height: 64px !important;
-        font-size: 1.3rem !important;
-    }
-
-    #opponent-input input,
-    #opponent-input button,
-    #opponent-input [role="combobox"] {
-        min-height: 82px !important;
-        font-size: 1.05rem !important;
-    }
-
-    #start-btn button {
-        min-height: 88px !important;
-        font-size: 1.05rem !important;
-    }
-
-    .opponent-roster,
-    .vitals-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .combatant.opponent {
-        align-items: center;
-        padding: 12px 18px 0;
-    }
-
-    .combatant.user {
-        align-items: center;
-        text-align: center;
-    }
-
-    #court-scene {
-        min-height: 720px;
-    }
-
-    .court-hud {
-        position: relative;
-        inset: auto;
-        padding: 12px;
-    }
-
+    #landing-header { height: 80px; padding: 0 18px; }
+    #landing-stage { padding: 16px 12px 24px !important; }
+    #docket-card { padding: 24px 0 20px; }
+    #docket-inner { padding: 0 16px; }
+    .court-hud { grid-template-columns: 1fr; position: relative; inset: auto; padding: 12px; }
+    #court-scene { min-height: 720px; }
     .court-character {
         left: 50%;
         transform: translateX(-50%);
         bottom: 215px;
         width: min(72vw, 310px);
-        max-height: 390px;
     }
-
-    .court-verdict-strip {
-        display: none;
-    }
-
-    .dialogue-box {
-        min-height: 190px;
-        padding: 32px 20px 24px;
-    }
-
-    .dialogue-name {
-        left: 18px;
-        min-width: 160px;
-        font-size: 1.1rem;
-    }
-
-    .dialogue-line {
-        font-size: 1.45rem;
-    }
+    .court-verdict-strip { display: none; }
 }
 """
 
@@ -1321,22 +562,6 @@ def get_health_bar_html(hp, name, is_user=True):
     """
 
 
-def get_roster_html():
-    chips = []
-    for data in OPPONENTS.values():
-        chips.append(
-            f"""
-            <div class="opponent-chip">
-                <img src="{file_url(data["image"])}" alt="{html.escape(data["name"])}">
-                <strong>{html.escape(data["name"])}</strong>
-                <span>{html.escape(data["epithet"])}</span>
-                <span>{html.escape(data["school"])}</span>
-            </div>
-            """
-        )
-    return f"""<div class="opponent-roster">{''.join(chips)}</div>"""
-
-
 def get_sprite_path(opponent, pose="talking"):
     data = OPPONENTS.get(opponent) or OPPONENTS["oscar_wilde"]
     safe_pose = pose if pose in {"talking", "thinking", "damage", "victory"} else "talking"
@@ -1374,17 +599,17 @@ def get_arena_html(
     stance_text = stance or "For"
     user_hp_safe = max(0, min(100, int(user_hp)))
     opp_hp_safe = max(0, min(100, int(opp_hp)))
-    sprite_path = get_sprite_path(opponent, opponent_pose)
-    player_sprite_path = get_player_sprite_path(player_pose)
-    bg_path = "sprites/opp_background.jpg"
+
     if active_actor == "opponent":
-        active_sprite_path = sprite_path
+        active_sprite_path = get_sprite_path(opponent, opponent_pose)
         active_alt = data["name"]
         sprite_size_class = data.get("sprite_scale", "tall")
     else:
-        active_sprite_path = player_sprite_path
+        active_sprite_path = get_player_sprite_path(player_pose)
         active_alt = "Advocate"
         sprite_size_class = "player"
+
+    bg_path = "sprites/opp_background.jpg"
     verdict_html = ""
     if verdict:
         escaped_verdict = html.escape(verdict).replace("\n", "<br>")
@@ -1645,17 +870,7 @@ def start_debate(topic, stance, opponent):
             100,
             get_health_bar_html(100, "You", True),
             get_health_bar_html(100, opponent_name(opponent), False),
-            get_arena_html(
-                user_hp=100,
-                opp_hp=100,
-                opponent=opponent or "oscar_wilde",
-                topic=topic or "",
-                stance=stance or "For",
-                speaker="Advocate",
-                dialogue="Before the court can convene, enter a motion and choose your opponent.",
-                active_actor="player",
-                player_pose="thinking",
-            ),
+            "",
             None,
         )
 
@@ -1772,9 +987,13 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
 
     chat_history.append({"role": "user", "content": user_arg})
 
-    situation_prompt = f"(Debate Topic: {topic}. The user is arguing {stance} this topic.)\nUser argues: {user_arg}\nDirectly contradict and fiercely attack the core premise of the user's argument. Do not agree with them under any circumstances."
+    situation_prompt = (
+        f"(Debate Topic: {topic}. The user is arguing {stance} this topic.)\n"
+        f"User argues: {user_arg}\n"
+        "Directly contradict and fiercely attack the core premise of the user's argument. "
+        "Do not agree with them under any circumstances."
+    )
 
-    # Parallelize Phase 1: User Argument Evaluation & Opponent Response Generation
     def run_judge_user():
         return post_modal_json(JUDGE_URL, {"topic": topic, "argument": user_arg})
 
@@ -1849,7 +1068,6 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
 
     turn_msg += "---\n\n"
 
-    # Parallelize Phase 2: Rebuttal TTS Synthesis & Rebuttal Evaluation
     def run_tts():
         return synthesize_rebuttal_audio(opp_response)
 
@@ -1874,11 +1092,10 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
     opp_reasoning = opp_judge["reasoning"]
 
     turn_msg += f"### {display_name}'s Rebuttal\n\"{opp_response_with_err}\"\n\n"
+    turn_msg += f"### Tribunal Verdict on Opponent\n**Score: {opp_score}/10** - *{opp_reasoning}*\n\n"
 
     opp_damage = calculate_damage(opp_score)
     opp_fatigue = calculate_fatigue(opp_score)
-
-    turn_msg += f"### Tribunal Verdict on Opponent\n**Score: {opp_score}/10** - *{opp_reasoning}*\n\n"
 
     if opp_damage > 0:
         user_hp = max(0, user_hp - opp_damage)
@@ -1935,7 +1152,8 @@ def handle_turn(user_audio, user_text, topic, stance, opponent, chat_history, us
     )
 
 
-with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft(), fill_height=True) as demo:
+# No fill_height — that was causing nested containers to grow and infinite scroll.
+with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft()) as demo:
     topic_state = gr.State("")
     stance_state = gr.State("")
     opponent_state = gr.State("")
@@ -1992,15 +1210,14 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft(), fill_hei
                     error_box = gr.HTML("", visible=False, elem_id="error-box")
 
     with gr.Column(visible=False, elem_classes="debate-shell") as debate_area:
-        arena_html = gr.HTML(get_arena_html())
-        with gr.Row(elem_classes=["vitals-grid", "hidden-runtime"]):
+        # Start empty — don't load 760px court scene on landing page.
+        arena_html = gr.HTML("")
+        with gr.Row(elem_classes=["hidden-runtime"]):
             user_health_html = gr.HTML(get_health_bar_html(100, "You", True))
             opp_health_html = gr.HTML(get_health_bar_html(100, "Opponent", False))
 
         chatbot = gr.Chatbot(label="Tribunal Transcript", height=500, elem_id="tribunal-chat", visible=False)
-
         opponent_voice = gr.Audio(label="Opponent Voice", autoplay=True, visible=True, elem_id="hidden-audio")
-
         user_audio = gr.Textbox(value="", elem_classes=["hidden-runtime"], elem_id="voice-payload")
 
         with gr.Row(elem_classes=["submit-row", "argument-dock"]):
@@ -2027,9 +1244,7 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft(), fill_hei
             submit_btn = gr.Button("SUBMIT ARGUMENT", variant="primary", scale=2)
 
         gr.HTML(
-            """
-            <div class="voice-hint">USE THE FAST RECORDER BELOW, STOP WHEN FINISHED, THEN SUBMIT YOUR ARGUMENT.</div>
-            """
+            '<div class="voice-hint">USE THE RECORDER, STOP WHEN FINISHED, THEN SUBMIT YOUR ARGUMENT.</div>'
         )
 
     start_btn.click(
@@ -2121,7 +1336,7 @@ with gr.Blocks(elem_id="tribunal-app", css=CSS, theme=gr.themes.Soft(), fill_hei
 if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
-        server_port=int(os.environ.get("PORT", 7860)),
+        server_port=int(os.environ.get("PORT", "7860")),
         allowed_paths=["."],
         css=CSS,
         theme=gr.themes.Soft(),
