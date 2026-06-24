@@ -67,33 +67,7 @@ The goal was to build a highly interactive, custom-styled game that showcases ho
 ## Tech Stack
 The game uses a split client-server architecture designed for low-latency inference on high-performance serverless GPU clusters.
 
-```mermaid
-graph TD
-    %% Nodes
-    User([User advocate])
-    Gradio[Gradio Web Client / app.py]
-    FastAPI[FastAPI Proxy Server / serve_modal_v2.py]
-    vLLM[vLLM Inference Engine]
-    BaseLLM[Qwen 3.5 9B Base Model]
-    LoRA[LoRA Adapters Volume]
-    Whisper[openai/whisper-tiny.en]
-    VoxCPM[openbmb/VoxCPM2 TTS]
 
-    %% Interactions
-    User -->|Voice / Text Input| Gradio
-    Gradio -->|FastAPI Endpoints| FastAPI
-    
-    subgraph Modal GPU Container (a100-80gb)
-        FastAPI -->|STT transcription| Whisper
-        FastAPI -->|TTS audio synthesis| VoxCPM
-        FastAPI -->|Argument & Rebuttal| vLLM
-        vLLM -->|Dynamic Adapter Loading| LoRA
-        vLLM -->|Base LLM Inference| BaseLLM
-    end
-
-    FastAPI -->|Text & Audio Stream| Gradio
-    Gradio -->|Visual novel UI / Spoken Rebuttals| User
-```
 
 - **Frontend (Gradio):** Custom parchment/courtroom CSS styling system, responsive layout media queries, and browser-based audio recording with input validation.
 - **Inference Server (Modal):** Serverless architecture hosting:
